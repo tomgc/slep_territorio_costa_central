@@ -21,9 +21,9 @@ source(file.path(RAIZ, "10_utils", "10_configuracion.R"))
 
 # ---- Definicion de pasos (orden de ejecucion) ----
 PASOS <- list(
-  list(id = 1, etiqueta = "Leer y validar maestro",      ruta = file.path("30_procesamiento", "31_leer_validar.R")),
-  list(id = 2, etiqueta = "Proyectar al lienzo",         ruta = file.path("30_procesamiento", "32_proyectar_lienzo.R")),
-  list(id = 3, etiqueta = "Generar afiche HTML/SVG",     ruta = file.path("30_procesamiento", "33_generar_afiche.R"))
+  list(id = 1L, etiqueta = "Leer y validar maestro",      ruta = file.path("30_procesamiento", "31_leer_validar.R")),
+  list(id = 2L, etiqueta = "Proyectar al lienzo",         ruta = file.path("30_procesamiento", "32_proyectar_lienzo.R")),
+  list(id = 3L, etiqueta = "Generar afiche HTML/SVG",     ruta = file.path("30_procesamiento", "33_generar_afiche.R"))
 )
 
 # Verificar al inicio que todas las rutas existan.
