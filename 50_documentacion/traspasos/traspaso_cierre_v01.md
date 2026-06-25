@@ -70,7 +70,8 @@ primaria. Fuentes del conteo: este traspaso y los siguientes.
 ### Clasificacion tematica (inicial, a refinar)
 | Categoria | N | % | Descripcion |
 |---|---|---|---|
-| Infraestructura/scaffolding | 9 | 100 | Estructura, utils, config, orquestador, escaner, docs |
+| Infraestructura/scaffolding | 9 | 90 | Estructura, utils, config, orquestador, escaner, docs |
+| Bugfix capa orquestacion | 1 | 10 | id de PASOS a integer (1L) |
 
 (Taxonomia organica: se refina cuando entren cambios de otras categorias como
 capa de datos, render del afiche, fidelidad visual, exportacion.)
@@ -78,17 +79,33 @@ capa de datos, render del afiche, fidelidad visual, exportacion.)
 ### Resumen estadistico por sesion
 | Sesion | Traspasos | Cambios | Modelo | Foco |
 |---|---|---|---|---|
-| 1 | v01 | 9 | Opus 4.8 | Init Rama A + decision densidad |
-| | | **9** | | **Total** |
+| 1 | v01 | 10 | Opus 4.8 | Init Rama A + decision densidad + bugfix id |
+| | | **10** | | **Total** |
 
 ### Detalle cronologico
 Sesion 1 (cambios 1-9): ver seccion 4.
+Cambio 10: fix id de PASOS a integer (1L) en 00_run_all.R; ver bug 1, seccion 6.
 
 ### Delta del backlog
-Primera version: 9 entradas nuevas, taxonomia inicial propuesta.
+Primera version: 10 entradas nuevas, taxonomia inicial propuesta.
 
 ## 6. Bugs de la sesion
-No aplica en esta sesion: no se reportaron bugs (sesion de inicializacion).
+- **Bug 1 — run_all() abortaba con "values must be type 'integer'".**
+  - **Sintoma observable:** `run_all(to = 2)` fallaba en
+    `vapply(PASOS, function(p) p$id, integer(1))` con
+    "result is type 'double'".
+  - **Causa raiz:** los `id` de PASOS se escribieron como literales numericos
+    `1, 2, 3`, que en R son **double**, no integer. `vapply(..., integer(1))`
+    exige integer estricto.
+  - **Solucion exacta:** 00_run_all.R L24-26, `id = 1/2/3` -> `id = 1L/2L/3L`.
+  - **Criterio de verificacion:** `run_all(to = 2)` corre y deja los dos .rds.
+    Verificado en maquina (R 4.5.2): 97 leidos, 60 pines + 37 tarjetas, 0 warnings.
+  - **Patron general aprendido:** en R, todo literal numerico que vaya a un
+    contenedor tipado con `vapply(..., integer(1))` (o comparaciones de tipo
+    estricto) debe llevar sufijo `L`. La regla aplica a cualquier `id`, indice o
+    contador definido como constante en estructuras.
+  - **Principios:** C.6 (rigor de tipado).
+  - **Estado:** resuelto y commiteado.
 
 ## 7. Aprendizajes y restricciones descubiertas
 - **El handoff es de muestra (17); el maestro real es 97.** Regla: nunca asumir
@@ -140,8 +157,8 @@ handoff de diseno vive en la raiz como referencia y fuente de fuentes/logo.
   mejora visual. Solo si P1 muestra solapes residuales.
 
 ### Auditoria de cierre (politica 5.6, preguntas "Cierre")
-- Pipeline corre de cero sin intervencion manual: parcial (31-32 si; 33 stub) ->
-  pendiente P1.
+- Pipeline corre de cero sin intervencion manual: 31-32 verificados en maquina;
+  33 es stub -> pendiente P1.
 - Outputs reproducibles e idempotentes: si (escritura atomica, sin estado).
 - Decisiones metodologicas como constantes nombradas: si.
 - Nombres sin tildes/enie/espacios: si.
