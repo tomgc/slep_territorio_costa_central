@@ -1,0 +1,28 @@
+# Sistema
+.Rproj.user/
+.Rhistory
+.RData
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# Nota: *.Rproj SI se versiona (ancla de here::here()). Solo .Rproj.user/ se ignora.
+
+# Snapshots y backups locales
+_archivo/
+*.bak
+
+# Outputs accidentales en raiz y scripts de diagnostico
+/*.docx
+/*.pdf
+/*.html
+/diagnostico_*.md
+/verificar_*.R
+/listar_*.R
+
+# Outputs temporales
+*_freeze/
+.quarto/
+
+# Artefactos intermedios del pipeline (se regeneran; el HTML/PDF final si se versiona)
+40_salidas/*.rds

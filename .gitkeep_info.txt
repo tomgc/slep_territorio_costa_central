@@ -1,0 +1,2 @@
+Carpetas vacias versionadas con .gitkeep para preservar la estructura canonica
+hasta que se llenen: 40_salidas/afiche, 50_documentacion/andamios, tests/testthat.

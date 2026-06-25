@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'gobCL';src:url('fonts/gobCL_Heavy.otf') format('opentype');font-weight:900;font-display:swap}
+@font-face{font-family:'gobCL';src:url('fonts/gobCL_Regular.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'Museo Sans';src:url('fonts/MuseoSans-300.otf') format('opentype');font-weight:300;font-display:swap}
+@font-face{font-family:'Museo Sans';src:url('fonts/MuseoSans_500.otf') format('opentype');font-weight:500;font-display:swap}
+</style>
+</helmet>
+<div style="position:relative;width:100%;height:100%;overflow:hidden;background:#FFFFFF;font-family:'Museo Sans',sans-serif">
+  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;display:block">
+    <rect width="100" height="100" fill="#FFFFFF"></rect>
+    <path d="M0,0 L24,0 C22,9 25,16 19,22 C13,28 11,36 21,44 C27,48 24,56 19,63 C15,69 20,78 13,87 C9,93 11,97 15,100 L0,100 Z" fill="#EAF3F8"></path>
+    <path d="M24,0 C22,9 25,16 19,22 C13,28 11,36 21,44 C27,48 24,56 19,63 C15,69 20,78 13,87 C9,93 11,97 15,100" fill="none" stroke="#C7DCEA" stroke-width="0.7"></path>
+    <path d="M21,27 L100,27" stroke="#EDE7DA" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path>
+    <path d="M22,52 L100,52" stroke="#EDE7DA" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path>
+    <path d="M17,76 L100,76" stroke="#EDE7DA" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path>
+    <path d="M30,10 C46,26 52,46 66,60 C74,68 82,74 96,80" fill="none" stroke="#F1EADC" stroke-width="0.8"></path>
+    <path d="M40,40 C54,50 60,62 76,70 C84,74 90,76 99,78" fill="none" stroke="#F4EFE3" stroke-width="0.7"></path>
+  </svg>
+
+  <div style="position:absolute;left:6%;top:50%;transform:translate(-50%,-50%) rotate(-90deg);font-family:'gobCL',sans-serif;font-weight:400;font-size:12px;letter-spacing:.22em;color:#AECBDB;white-space:nowrap">Océano Pacífico</div>
+
+  <div style="position:absolute;left:62%;top:15%;transform:translate(-50%,-50%);font-family:'gobCL',sans-serif;font-weight:400;font-size:14px;letter-spacing:.03em;color:#B6A294">Puchuncaví</div>
+  <div style="position:absolute;left:66%;top:39%;transform:translate(-50%,-50%);font-family:'gobCL',sans-serif;font-weight:400;font-size:14px;letter-spacing:.03em;color:#B6A294">Quintero</div>
+  <div style="position:absolute;left:78%;top:63%;transform:translate(-50%,-50%);font-family:'gobCL',sans-serif;font-weight:400;font-size:14px;letter-spacing:.03em;color:#B6A294">Concón</div>
+  <div style="position:absolute;left:30%;top:95%;transform:translate(-50%,-50%);font-family:'gobCL',sans-serif;font-weight:400;font-size:14px;letter-spacing:.03em;color:#B6A294">Viña del Mar</div>
+
+  <!-- zonas dispersas (abren a la derecha): tarjeta con número + nombre + (RBD) -->
+  <sc-for list="{{ cardsRight }}" as="e" hint-placeholder-count="8">
+    <div style="position:absolute;left:{{ e.x }}%;top:{{ e.y }}%;transform:translateY(-50%);display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #E2D9C4;border-radius:8px;padding:4px 13px 4px 4px;box-shadow:0 2px 7px rgba(74,39,70,.14);white-space:nowrap">
+      <div style="width:28px;height:28px;flex:none;border-radius:50%;background:{{ e.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-family:'gobCL',sans-serif;font-weight:900;font-size:12.5px">{{ e.n }}</div>
+      <div style="font-family:'Museo Sans',sans-serif;font-weight:500;font-size:12.5px;color:#2E2230">{{ e.nombre }} <span style="font-weight:300;color:#9a9488">({{ e.rbd }})</span></div>
+    </div>
+  </sc-for>
+
+  <!-- zonas dispersas (abren a la izquierda para no cortarse en el borde) -->
+  <sc-for list="{{ cardsLeft }}" as="e" hint-placeholder-count="3">
+    <div style="position:absolute;left:{{ e.x }}%;top:{{ e.y }}%;transform:translate(-100%,-50%);display:flex;flex-direction:row-reverse;align-items:center;gap:9px;background:#fff;border:1px solid #E2D9C4;border-radius:8px;padding:4px 4px 4px 13px;box-shadow:0 2px 7px rgba(74,39,70,.14);white-space:nowrap">
+      <div style="width:28px;height:28px;flex:none;border-radius:50%;background:{{ e.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-family:'gobCL',sans-serif;font-weight:900;font-size:12.5px">{{ e.n }}</div>
+      <div style="font-family:'Museo Sans',sans-serif;font-weight:500;font-size:12.5px;color:#2E2230">{{ e.nombre }} <span style="font-weight:300;color:#9a9488">({{ e.rbd }})</span></div>
+    </div>
+  </sc-for>
+
+  <!-- Viña del Mar: racimo de números (referencia en la leyenda) -->
+  <sc-for list="{{ pins }}" as="p" hint-placeholder-count="5">
+    <div style="position:absolute;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'gobCL',sans-serif;font-weight:900;font-size:13px;border:2.5px solid #fff;box-shadow:0 2px 5px rgba(74,39,70,.22);transform:translate(-50%,-50%);background:{{ p.color }};color:#fff;left:{{ p.x }}%;top:{{ p.y }}%">{{ p.n }}</div>
+  </sc-for>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:560,&quot;height&quot;:820},&quot;est&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;any[]&quot;,&quot;default&quot;:[]}}">
+class Component extends DCLogic {
+  renderVals() {
+    const est = this.props.est || [];
+    const cards = est.filter((e) => e.comuna !== 'Viña del Mar');
+    return {
+      cardsRight: cards.filter((e) => e.x <= 46),
+      cardsLeft: cards.filter((e) => e.x > 46),
+      pins: est.filter((e) => e.comuna === 'Viña del Mar'),
+    };
+  }
+}
+</script>
+</body>
+</html>

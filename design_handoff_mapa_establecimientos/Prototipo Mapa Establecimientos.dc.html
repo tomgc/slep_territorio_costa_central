@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+@font-face{font-family:'gobCL';src:url('fonts/gobCL_Heavy.otf') format('opentype');font-weight:900;font-display:swap}
+@font-face{font-family:'gobCL';src:url('fonts/gobCL_Regular.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'Museo Sans';src:url('fonts/MuseoSans-300.otf') format('opentype');font-weight:300;font-display:swap}
+@font-face{font-family:'Museo Sans';src:url('fonts/MuseoSans_500.otf') format('opentype');font-weight:500;font-display:swap}
+@font-face{font-family:'Museo Sans';src:url('fonts/MuseoSans_700.otf') format('opentype');font-weight:700;font-display:swap}
+body{margin:0;background:#EAE6DC}
+</style>
+</helmet>
+<div style="width:1240px;height:1754px;background:#FFFFFF;margin:0 auto;display:flex;flex-direction:column;font-family:'Museo Sans',sans-serif">
+
+  <!-- header (white · low ink) -->
+  <div style="height:190px;flex:none;display:flex;align-items:center;gap:34px;padding:0 56px;border-bottom:2px solid #4A2746">
+    <img src="assets/logo-color-stacked.png" alt="SLEP Costa Central" style="height:134px;width:auto;display:block"/>
+    <div style="width:1px;height:104px;background:#E2D9C4"></div>
+    <div style="font-family:'gobCL',sans-serif;font-weight:900;font-size:37px;letter-spacing:-.01em;color:#4A2746;line-height:1.02">Mapa de establecimientos</div>
+  </div>
+
+  <!-- body -->
+  <div style="flex:1;display:flex;min-height:0">
+
+    <!-- legend (left) -->
+    <aside style="width:468px;flex:none;border-right:1px solid #E7DFC9;padding:30px 40px 26px;display:flex;flex-direction:column">
+      <div style="font-family:'gobCL',sans-serif;font-weight:900;font-size:25px;color:#1C1212;letter-spacing:-.01em;margin-bottom:11px">Lista de establecimientos</div>
+      <div style="font-family:'Museo Sans',sans-serif;font-weight:300;font-size:14px;line-height:1.55;color:#5d5650;margin-bottom:20px">Cada número del mapa corresponde a un establecimiento. La lista los segmenta por tipo de establecimiento.</div>
+
+      <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="4">
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:baseline;gap:9px;padding-bottom:9px;margin-bottom:11px;border-bottom:1px solid #ECE2C6">
+            <span style="width:13px;height:13px;border-radius:50%;background:{{ g.color }};align-self:center;flex:none"></span>
+            <span style="font-family:'gobCL',sans-serif;font-weight:400;font-size:16.5px;color:#2E2A28">{{ g.label }}</span>
+            <span style="font-family:'gobCL',sans-serif;font-weight:400;font-size:16.5px;color:#3A3A3A">({{ g.count }})</span>
+            <span style="margin-left:auto;font-family:'Museo Sans',sans-serif;font-weight:300;font-size:12.5px;color:#9a9488">{{ g.sub }}</span>
+          </div>
+          <sc-for list="{{ g.items }}" as="e" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+              <div style="width:29px;height:29px;flex:none;border-radius:50%;background:{{ g.color }};color:#fff;display:flex;align-items:center;justify-content:center;font-family:'gobCL',sans-serif;font-weight:900;font-size:13px">{{ e.n }}</div>
+              <div style="min-width:0;flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font-family:'Museo Sans',sans-serif;font-weight:500;font-size:14px;color:#2E2230;line-height:1.25">{{ e.nombre }}</span>
+                <span style="font-family:'Museo Sans',sans-serif;font-weight:300;font-size:12px;color:#9a9488;white-space:nowrap">{{ e.comuna }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </aside>
+
+    <!-- map (right · tall) -->
+    <div style="flex:1;position:relative;min-width:0;padding:28px 30px">
+      <div style="position:relative;width:100%;height:100%;border:1px solid #E2D9C4;border-radius:8px;overflow:hidden">
+        <dc-import name="Mapa" est="{{ mapaEst }}" hint-size="100%,100%" style="width:100%;height:100%"></dc-import>
+      </div>
+    </div>
+  </div>
+
+  <!-- footer (white · low ink) -->
+  <div style="height:72px;flex:none;border-top:1px solid #E7DFC9;display:flex;align-items:center;justify-content:space-between;padding:0 56px">
+    <div style="font-family:'Museo Sans',sans-serif;font-weight:300;font-size:15px;color:#5d5650"><span style="font-family:'gobCL',sans-serif;font-weight:900;color:#1C1212">17 establecimientos</span> · 4 comunas</div>
+    <div style="font-family:'gobCL',sans-serif;font-weight:900;font-size:15px;letter-spacing:.02em;color:#4A2746">Puchuncaví <span style="color:#C9A7BC">·</span> Quintero <span style="color:#C9A7BC">·</span> Concón <span style="color:#C9A7BC">·</span> Viña del Mar</div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.est = [
+      { n: 1,  nombre: 'Jardín Infantil Las Gaviotas',  tipo: 'jardin',   comuna: 'Puchuncaví',   rbd: '1601-8', x: 35, y: 9  },
+      { n: 2,  nombre: 'Escuela General Velásquez',     tipo: 'basica',   comuna: 'Puchuncaví',   rbd: '1605-1', x: 44, y: 15 },
+      { n: 3,  nombre: 'Liceo Sargento Aldea',          tipo: 'liceo',    comuna: 'Puchuncaví',   rbd: '1610-4', x: 38, y: 21 },
+      { n: 4,  nombre: 'Jardín Infantil Caracolito',    tipo: 'jardin',   comuna: 'Quintero',     rbd: '1622-7', x: 30, y: 33 },
+      { n: 5,  nombre: 'Escuela Marítima de Quintero',  tipo: 'basica',   comuna: 'Quintero',     rbd: '1630-2', x: 38, y: 39 },
+      { n: 6,  nombre: 'Liceo Politécnico de Quintero', tipo: 'liceo',    comuna: 'Quintero',     rbd: '1635-5', x: 32, y: 45 },
+      { n: 7,  nombre: 'Escuela Especial Quintero',     tipo: 'especial', comuna: 'Quintero',     rbd: '1648-3', x: 44, y: 50 },
+      { n: 8,  nombre: 'Jardín Infantil Semillita',     tipo: 'jardin',   comuna: 'Concón',       rbd: '1701-3', x: 44, y: 58 },
+      { n: 9,  nombre: 'Escuela República del Ecuador', tipo: 'basica',   comuna: 'Concón',       rbd: '1705-6', x: 53, y: 63 },
+      { n: 10, nombre: 'Liceo Técnico de Concón',       tipo: 'liceo',    comuna: 'Concón',       rbd: '1710-K', x: 46, y: 68 },
+      { n: 11, nombre: 'CEIA Concón',                   tipo: 'adultos',  comuna: 'Concón',       rbd: '1718-9', x: 40, y: 73 },
+      { n: 12, nombre: 'Jardín Infantil Rayito de Sol', tipo: 'jardin',   comuna: 'Viña del Mar', rbd: '1820-4', x: 41, y: 82 },
+      { n: 13, nombre: 'Jardín Infantil Pasos de Niño', tipo: 'jardin',   comuna: 'Viña del Mar', rbd: '1822-1', x: 36, y: 86 },
+      { n: 14, nombre: 'Escuela República de Chile',    tipo: 'basica',   comuna: 'Viña del Mar', rbd: '1825-7', x: 50, y: 84 },
+      { n: 15, nombre: 'Escuela Especial Las Dunas',    tipo: 'especial', comuna: 'Viña del Mar', rbd: '1828-2', x: 57, y: 82 },
+      { n: 16, nombre: 'Liceo Bicentenario de Viña',    tipo: 'liceo',    comuna: 'Viña del Mar', rbd: '1830-1', x: 45, y: 89 },
+      { n: 17, nombre: 'CEIA Viña del Mar',             tipo: 'adultos',  comuna: 'Viña del Mar', rbd: '1835-K', x: 55, y: 88 },
+    ];
+    this.TIPOS = [
+      { key: 'jardin',   label: 'Jardines infantiles', sub: 'Educación parvularia', color: '#75924E' },
+      { key: 'basica',   label: 'Escuelas básicas',    sub: 'Enseñanza básica',     color: '#0062A0' },
+      { key: 'liceo',    label: 'Liceos',              sub: 'Enseñanza media',      color: '#E88663' },
+      { key: 'especial', label: 'Educación especial',  sub: 'Escuelas especiales',  color: '#A6741C' },
+      { key: 'adultos',  label: 'Educación de adultos', sub: 'CEIA',                color: '#4A2746' },
+    ];
+  }
+  renderVals() {
+    const est = this.est;
+    const colorOf = {};
+    this.TIPOS.forEach((t) => { colorOf[t.key] = t.color; });
+    const mapaEst = est.map((e) => ({ ...e, color: colorOf[e.tipo] }));
+    const grupos = this.TIPOS.map((t) => {
+      const items = est.filter((e) => e.tipo === t.key).sort((a, b) => a.n - b.n);
+      return { ...t, items, count: items.length };
+    });
+    return { est, mapaEst, grupos };
+  }
+}
+</script>
+</body>
+</html>
