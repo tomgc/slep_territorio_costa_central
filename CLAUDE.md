@@ -30,12 +30,12 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Numeración N→S estricta + nota + índice** (v6): `numerar()` ordena 1-97 por latitud
-   pura (sin agrupar por tipo); rangos por comuna se mantienen. Nota de fuente con el texto
-   del Área de Monitoreo. Índice: fuente mayor (`INDICE_FONT`) y `space-between` para llenar
-   el alto sin hueco; sin truncar (tope por no-overflow).
-2. **Pines grandes + anti-colisión 2D garantizada** (v4): círculo real en datos, centros
-   ≥ 2·PIN_RADIO (min_dist 48px ≥ 44). Zonas de exclusión de rótulos de ciudad del tile.
-3. **Límites comunales BCN** (alta resolución), recortado de `comunas_bcn/` (gitignored).
-4. Mapa con pines numerados sobre CARTO + límites BCN; índice (izq) con número+nombre+RBD.
+1. **Tile sin rótulos + etiquetas de comuna propias** (v7): tile `CartoDB.PositronNoLabels`
+   (geografía sin texto horneado); se eliminaron las zonas de exclusión (la repulsión entre
+   pines se mantiene, 🔒); 4 etiquetas de comuna propias (`ETIQUETAS_COMUNA`) en azul gobCL
+   (`COLOR_COMUNA=#0F69B4`, `LABEL_COMUNA_FONT`), en vacíos sin pines.
+2. **Numeración N→S estricta + nota + índice a alto completo** (v6): 1-97 por latitud pura.
+3. **Pines grandes + anti-colisión 2D garantizada** (v4): círculo real en datos, min_dist 48px ≥ 44.
+4. **Límites comunales BCN** (alta resolución), recortado de `comunas_bcn/` (gitignored).
+   Mapa con pines numerados; índice (izq) con número+nombre+RBD; inset de Viña.
 5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
