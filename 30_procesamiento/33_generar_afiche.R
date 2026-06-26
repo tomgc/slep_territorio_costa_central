@@ -67,17 +67,19 @@ PIN_FONT     <- 4.3     # tamaño unico del numero (geom_text, mm)
 INDICE_FONT     <- 10.3  # px: numero, nombre y RBD del indice (max sin overflow)
 INDICE_FONT_HDR <- 13    # px: encabezado de comuna
 
-# Zonas de exclusion: rectangulos (px del PNG, origen arriba-izquierda) que cubren
-# los rotulos de ciudad HORNEADOS en el tile CARTO (no se pueden mover desde el
-# codigo). Calibrados inspeccionando el render. La anti-colision las trata como
-# obstaculos fijos: ningun pin entra en ellas, asi no tapan el nombre de ciudad.
-.zona <- function(nom, cx, cy, hw, hh)
-  data.frame(nom = nom, xmin = cx-hw, xmax = cx+hw, ymin = cy-hh, ymax = cy+hh)
-ZONAS_NORTE <- rbind(
-  .zona("Maitencillo", 700, 122, 100, 32), .zona("Puchuncaví", 815, 588, 105, 34),
-  .zona("Campiche",    601, 624,  85, 32), .zona("Ventanas",   441, 681,  95, 32),
-  .zona("Quintero",    233, 941,  95, 32), .zona("Concón",     293,1735,  78, 32))
-ZONAS_VINA  <- .zona("Viña del Mar", 492, 618, 182, 78)
+# Etiquetas de comuna PROPIAS (v7): el tile ya no trae rotulos (PositronNoLabels),
+# asi que el afiche dibuja sus propias etiquetas de comuna. Azul institucional gobCL,
+# tamaño unico grande, en zonas despejadas. Posiciones (lon/lat) afinadas sobre el
+# render para caer en el vacio sin pines.
+COLOR_COMUNA      <- "#0F69B4"   # azul institucional gobCL
+LABEL_COMUNA_FONT <- 6.2         # tamaño unico (geom_text, mm); > numero de pin
+ETIQUETAS_COMUNA <- data.frame(
+  nom    = c("Puchuncaví", "Quintero", "Concón", "Viña del Mar"),
+  panel  = c("norte", "norte", "norte", "vina"),
+  # afinadas sobre el render hacia el vacio sin pines, dentro del marco:
+  lon    = c(-71.425, -71.520, -71.515, -71.573),
+  lat    = c(-32.752, -32.860, -32.945, -33.010),
+  stringsAsFactors = FALSE)
 
 # Rutas de PNG de paneles.
 PNG_NORTE <- ruta_salidas("afiche", "panel_norte.png")
@@ -186,7 +188,7 @@ comuna_paths <- function(com_sf, comunas) {
 get_carto_3857 <- function(b, zoom) {
   poly <- st_as_sfc(st_bbox(c(xmin = b[1], ymin = b[3], xmax = b[2], ymax = b[4]),
                             crs = 3857))
-  tiles <- maptiles::get_tiles(poly, provider = "CartoDB.Positron",
+  tiles <- maptiles::get_tiles(poly, provider = "CartoDB.PositronNoLabels",
                                zoom = zoom, crop = TRUE, cachedir = tempdir())
   arr <- terra::as.array(tiles)
   img <- matrix(grDevices::rgb(arr[, , 1], arr[, , 2], arr[, , 3], maxColorValue = 255),
@@ -195,9 +197,10 @@ get_carto_3857 <- function(b, zoom) {
 }
 
 # Anti-colision 2D real (encargo v4), en px del PNG. Repulsion de discos
-# (radio r, separacion minima 2r+gap) + expulsion de zonas de exclusion fijas
-# (obstaculos) + clamp al marco. Parte de la posicion real y desplaza lo minimo.
-separar_pines <- function(px, py, r, gap, Z, Wpx, Hpx, iters = 1200) {
+# (radio r, separacion minima 2r+gap) + clamp al marco. Parte de la posicion real y
+# desplaza lo minimo. (v7: las zonas de exclusion se eliminaron junto al tile con
+# rotulos; la repulsion entre pines se mantiene intacta.)
+separar_pines <- function(px, py, r, gap, Wpx, Hpx, iters = 1200) {
   n <- length(px); sep <- 2*r + gap; ox <- px; oy <- py
   for (it in seq_len(iters)) {
     moved <- FALSE
@@ -208,16 +211,6 @@ separar_pines <- function(px, py, r, gap, Z, Wpx, Hpx, iters = 1200) {
         ph <- (sep-d)/2; ux <- dx/d; uy <- dy/d
         px[a] <- px[a]+ux*ph; py[a] <- py[a]+uy*ph
         px[b] <- px[b]-ux*ph; py[b] <- py[b]-uy*ph; moved <- TRUE
-      }
-    }
-    if (!is.null(Z) && nrow(Z)) for (z in seq_len(nrow(Z))) {
-      ins <- which(px > Z$xmin[z]-r & px < Z$xmax[z]+r & py > Z$ymin[z]-r & py < Z$ymax[z]+r)
-      for (i in ins) {
-        dl <- px[i]-(Z$xmin[z]-r); dr <- (Z$xmax[z]+r)-px[i]
-        db <- py[i]-(Z$ymin[z]-r); dt <- (Z$ymax[z]+r)-py[i]; m <- min(dl,dr,db,dt)
-        if (m==dl) px[i] <- Z$xmin[z]-r else if (m==dr) px[i] <- Z$xmax[z]+r else
-        if (m==db) py[i] <- Z$ymin[z]-r else py[i] <- Z$ymax[z]+r
-        moved <- TRUE
       }
     }
     px <- pmin(pmax(px, r), Wpx-r); py <- pmin(pmax(py, r), Hpx-r)
@@ -243,15 +236,23 @@ circulos <- function(cx, cy, r, fill, id, nseg = 44) {
                grp = id[i], fill = fill[i])))
 }
 
-# Dibuja un plano: proyecta -> px -> separa (anti-colision 2D + zonas) -> datos ->
-# circulos + numeros sobre tiles + limites. GATE: si no logra no-solape o empuja
-# pines fuera del marco, PARA con numeros (decision del usuario, no fuerza).
-dibujar_pines <- function(sub, b3, H, Z, tl, com_sf, comunas, out) {
+# Proyecta etiquetas de comuna (lon/lat) a coordenadas 3857 para geom_text.
+etiquetas_xy <- function(et) {
+  if (nrow(et) == 0) return(et)
+  p <- st_coordinates(st_transform(
+    st_as_sf(et, coords = c("lon", "lat"), crs = 4326), 3857))
+  et$X <- p[,1]; et$Y <- p[,2]; et
+}
+
+# Dibuja un plano: proyecta -> px -> separa (anti-colision 2D) -> datos -> circulos
+# + numeros sobre tiles + limites + etiquetas de comuna propias. GATE: si no logra
+# no-solape o empuja pines fuera del marco, PARA con numeros (no fuerza).
+dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, etiquetas, out) {
   Wpx <- MAPA_W*ESC; Hpx <- H*ESC; Xr <- b3[2]-b3[1]; Yr <- b3[4]-b3[3]
   pc <- st_as_sf(sub, coords = c("longitud", "latitud"), crs = 4326)
   xy <- st_coordinates(st_transform(pc, 3857)); sub$X <- xy[,1]; sub$Y <- xy[,2]
   px <- (sub$X - b3[1])/Xr*Wpx; py <- (b3[4] - sub$Y)/Yr*Hpx
-  s  <- separar_pines(px, py, PIN_RADIO_PX, PIN_GAP_PX, Z, Wpx, Hpx)
+  s  <- separar_pines(px, py, PIN_RADIO_PX, PIN_GAP_PX, Wpx, Hpx)
   dmin  <- mindist(s$px, s$py)
   fuera <- sum(s$px < PIN_RADIO_PX | s$px > Wpx-PIN_RADIO_PX |
                s$py < PIN_RADIO_PX | s$py > Hpx-PIN_RADIO_PX)
@@ -264,6 +265,7 @@ dibujar_pines <- function(sub, b3, H, Z, tl, com_sf, comunas, out) {
   rdat <- PIN_RADIO_PX * Xr/Wpx
   poly <- circulos(cxd, cyd, rdat, sub$color, sub$num)
   bord <- comuna_paths(com_sf, comunas)
+  et   <- etiquetas_xy(etiquetas)
   g <- ggplot() +
     annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
     geom_path(data = bord, aes(X, Y, group = grp),
@@ -274,6 +276,8 @@ dibujar_pines <- function(sub, b3, H, Z, tl, com_sf, comunas, out) {
     geom_text(data = data.frame(X = cxd, Y = cyd, num = sub$num),
               aes(X, Y, label = num), color = "white", family = "gobCL",
               fontface = "bold", size = PIN_FONT) +
+    geom_text(data = et, aes(X, Y, label = nom), color = COLOR_COMUNA,
+              family = "gobCL", fontface = "bold", size = LABEL_COMUNA_FONT) +
     coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
     theme_void()
   ragg::agg_png(out, width = Wpx, height = Hpx, units = "px", res = 72*ESC, background = "white")
@@ -290,7 +294,8 @@ render_panel_norte <- function(est, com_sf) {
   b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))               # -> xmin xmax ymin ymax
   b3 <- fit_bbox_3857(b3, MAPA_W / NORTE_H, grow_west = FALSE)
   tl <- get_carto_3857(b3, zoom = 12)
-  dibujar_pines(chicas, b3, NORTE_H, ZONAS_NORTE, tl, com_sf, COMUNAS_CHICAS, PNG_NORTE)
+  et <- ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "norte", ]
+  dibujar_pines(chicas, b3, NORTE_H, tl, com_sf, COMUNAS_CHICAS, et, PNG_NORTE)
 }
 
 # ---- 9. Render del inset Vina (🔒-2) ----
@@ -302,7 +307,8 @@ render_panel_vina <- function(est, com_sf) {
   b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))
   b3 <- fit_bbox_3857(b3, MAPA_W / VINA_H, grow_west = FALSE)
   tl <- get_carto_3857(b3, zoom = 13)
-  dibujar_pines(vina, b3, VINA_H, ZONAS_VINA, tl, com_sf, COMUNA_INSET, PNG_VINA)
+  et <- ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "vina", ]
+  dibujar_pines(vina, b3, VINA_H, tl, com_sf, COMUNA_INSET, et, PNG_VINA)
 }
 
 # ---- 10. Chrome HTML (header, indice N->S, leyenda, logo) ----
