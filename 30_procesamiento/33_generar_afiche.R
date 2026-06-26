@@ -27,7 +27,7 @@ source(here::here("10_utils", "10_configuracion.R"))
 
 # ---- 2. Auto-instalacion ----
 instalar_si_falta(c("dplyr", "sf", "maptiles", "terra", "ggplot2", "ragg",
-                    "systemfonts", "base64enc", "glue"))
+                    "systemfonts", "base64enc", "glue", "pagedown", "pdftools"))
 
 # ---- 3. Librerias ----
 suppressMessages({
@@ -47,7 +47,17 @@ MAPA_W     <- LIENZO$ancho - LIENZO$lista_w - 2 * PAD_MAPA            # 728
 ALTO_BODY  <- LIENZO$alto - LIENZO$header_h - 2 * PAD_MAPA           # 1520
 NORTE_H    <- 944
 VINA_H     <- ALTO_BODY - NORTE_H - GAP_PANEL                        # 560
-ESC        <- 2L              # factor de render (retina)
+
+# ---- Salida fisica A0 vertical (encargo v8) ----
+# El lienzo px (1240x1754, proporcion ~A4/raiz2) se imprime a tamaño A0 vertical.
+A0_W_MM <- 841; A0_H_MM <- 1189; PX_POR_PULG_CSS <- 96
+DPI_A0  <- 200L  # densidad objetivo de los PNG de mapa sobre A0 (>=150 minimo)
+# ESC = factor de render de los PNG para que su ancho en px de la densidad pedida
+# sobre el ancho fisico que el panel ocupa en A0. A 200 dpi da ~5.34.
+ESC <- DPI_A0 * A0_W_MM / (25.4 * LIENZO$ancho)
+# ZOOM lleva el contenedor px a tamaño A0 (ajusta por alto, deja ~1mm de holgura
+# para no forzar una 2a pagina). El texto sigue siendo vectorial bajo zoom.
+ZOOM <- 0.999 * (A0_H_MM / 25.4 * PX_POR_PULG_CSS) / LIENZO$alto
 
 # Colores de pin por tipo (encargo v2). El indice y la leyenda usan los mismos.
 COLOR_TIPO <- c(jardin = "#6a8a3a", basica = "#2d5f8a", liceo = "#c8732e",
@@ -55,12 +65,13 @@ COLOR_TIPO <- c(jardin = "#6a8a3a", basica = "#2d5f8a", liceo = "#c8732e",
 # Borde comunal sutil pero visible sobre CARTO Positron.
 COL_BORDE_COMUNA <- "#7a7a7a"
 
-# Pin unico grande (encargo v4). Radio y fuente en px del PNG final, iguales en
-# ambos planos -> mismo tamaño visual. La anti-colision trabaja en px y GARANTIZA
-# que ningun par de centros quede a < 2*PIN_RADIO_PX (verificado numericamente).
-PIN_RADIO_PX <- 22      # radio del pin en px del PNG (diametro 44 px)
-PIN_GAP_PX   <- 4       # separacion minima visible entre bordes de pines
-PIN_FONT     <- 4.3     # tamaño unico del numero (geom_text, mm)
+# Pin unico grande (encargo v4). Radio/separacion en px del PNG; ESCALAN con ESC
+# para conservar la proporcion del pin respecto al panel a cualquier densidad
+# (22 px / 4 px cuando ESC=2; v8 sube ESC para A0 sin cambiar la proporcion).
+# La anti-colision GARANTIZA centros a >= 2*PIN_RADIO_PX (verificado numericamente).
+PIN_RADIO_PX <- 11 * ESC   # radio del pin en px del PNG (22 px-equivalentes a ESC=2)
+PIN_GAP_PX   <- 2 * ESC    # separacion minima visible entre bordes de pines
+PIN_FONT     <- 4.3        # tamaño unico del numero (geom_text, mm; proporcion constante)
 
 # Indice (v6): fuente ligeramente mayor (antes 10/12.5 px) para llenar el alto.
 # Tope por no-overflow: los 97 (Viña en 2 col) deben caber; space-between reparte slack.
@@ -257,8 +268,8 @@ dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, etiquetas, out) {
   fuera <- sum(s$px < PIN_RADIO_PX | s$px > Wpx-PIN_RADIO_PX |
                s$py < PIN_RADIO_PX | s$py > Hpx-PIN_RADIO_PX)
   if (dmin < 2*PIN_RADIO_PX - 0.5 || fuera > 0)
-    stop(sprintf(paste0("GATE [%s]: min_dist=%.1f px (requerido %d) o pines fuera ",
-      "de marco=%d. La anti-colision con PIN_RADIO_PX=%d no cabe; bajar el radio ",
+    stop(sprintf(paste0("GATE [%s]: min_dist=%.1f px (requerido %.0f) o pines fuera ",
+      "de marco=%d. La anti-colision con PIN_RADIO_PX=%.1f no cabe; bajar el radio ",
       "o usar mini-inset para el cluster denso (decision del usuario)."),
       out, dmin, 2*PIN_RADIO_PX, fuera, PIN_RADIO_PX))
   cxd <- b3[1] + s$px/Wpx*Xr; cyd <- b3[4] - s$py/Hpx*Yr
@@ -380,9 +391,9 @@ generar_html <- function(est) {
 {bloque_fontface()}
 *{{margin:0;padding:0;box-sizing:border-box}}
 body{{margin:0;background:{t$pagina}}}
-@page{{size:{LIENZO$ancho}px {LIENZO$alto}px;margin:0}}
+@page{{size:{A0_W_MM}mm {A0_H_MM}mm;margin:0}}
 </style></head><body>
-<div style="width:{LIENZO$ancho}px;height:{LIENZO$alto}px;background:{t$papel};margin:0 auto;display:flex;flex-direction:column;font-family:\'Museo Sans\',sans-serif">
+<div style="zoom:{ZOOM};width:{LIENZO$ancho}px;height:{LIENZO$alto}px;background:{t$papel};margin:0 auto;display:flex;flex-direction:column;font-family:\'Museo Sans\',sans-serif">
 
 <div style="height:{LIENZO$header_h}px;flex:none;display:flex;align-items:center;gap:30px;padding:0 48px;border-bottom:2px solid {t$ciruela}">
 {logo_tag}
@@ -434,10 +445,10 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   log_msg(sprintf("Limites comunales cargados: %d comunas.", nrow(com_sf)),
           origen = "33_afiche")
   rn <- render_panel_norte(est, com_sf)
-  log_msg(sprintf("Panel norte: %d pines (min_dist=%.1f px >= %d; desp max=%.0f px).",
+  log_msg(sprintf("Panel norte: %d pines (min_dist=%.1f px >= %.0f; desp max=%.0f px).",
                   rn$n, rn$dmin, 2*PIN_RADIO_PX, rn$desp_max), origen = "33_afiche")
   rv <- render_panel_vina(est, com_sf)
-  log_msg(sprintf("Inset Vina: %d pines (min_dist=%.1f px >= %d; desp max=%.0f px).",
+  log_msg(sprintf("Inset Vina: %d pines (min_dist=%.1f px >= %.0f; desp max=%.0f px).",
                   rv$n, rv$dmin, 2*PIN_RADIO_PX, rv$desp_max), origen = "33_afiche")
 
   html <- generar_html(est)
@@ -445,7 +456,37 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   tmp <- paste0(salida, ".tmp")
   writeLines(html, tmp, useBytes = TRUE)
   file.rename(tmp, salida)
-  log_msg(sprintf("Afiche generado en %s", salida), origen = "33_afiche")
-  log_msg("Para exportar a PDF: pagedown::chrome_print(<html>, <pdf>).",
-          origen = "33_afiche")
+  log_msg(sprintf("Afiche A0 generado en %s (ESC=%.2f, DPI_A0=%d, ZOOM=%.3f)",
+                  salida, ESC, DPI_A0, ZOOM), origen = "33_afiche")
+
+  # ---- Exportar a PDF A0 vertical con fuentes incrustadas (texto editable) ----
+  pdf_out <- ruta_salidas("afiche", "mapa_establecimientos.pdf")
+  in_pulg <- function(mm) mm / 25.4
+  ok <- tryCatch({
+    pagedown::chrome_print(
+      input = salida, output = pdf_out, verbose = 0,
+      options = list(
+        paperWidth = in_pulg(A0_W_MM), paperHeight = in_pulg(A0_H_MM),
+        marginTop = 0, marginBottom = 0, marginLeft = 0, marginRight = 0,
+        printBackground = TRUE, preferCSSPageSize = TRUE))
+    TRUE
+  }, error = function(e) { log_msg(paste("chrome_print fallo:", conditionMessage(e)),
+                                   nivel = "ERROR", origen = "33_afiche"); FALSE })
+  if (ok) {
+    mb <- round(file.info(pdf_out)$size / 1e6, 1)
+    log_msg(sprintf("PDF A0 generado en %s (%.1f MB)", pdf_out, mb), origen = "33_afiche")
+    # Verificacion de editabilidad: texto seleccionable + fuentes incrustadas.
+    if (requireNamespace("pdftools", quietly = TRUE)) {
+      ps <- pdftools::pdf_pagesize(pdf_out)
+      log_msg(sprintf("PDF pagesize: %.0f x %.0f pt (A0 = 2384 x 3370 pt)",
+                      ps$width[1], ps$height[1]), origen = "33_afiche")
+      fn <- pdftools::pdf_fonts(pdf_out)
+      log_msg(sprintf("Fuentes incrustadas: %d/%d (embedded). Familias: %s",
+                      sum(fn$embedded), nrow(fn),
+                      paste(unique(fn$name), collapse = ", ")), origen = "33_afiche")
+    } else {
+      log_msg("Instala 'pdftools' para verificar texto/fuentes del PDF.",
+              nivel = "WARN", origen = "33_afiche")
+    }
+  }
 }
