@@ -1,15 +1,24 @@
 # =============================================================================
 # 33_generar_afiche.R
-# Proposito : Generar el afiche A0 (HTML/SVG autocontenido) que reproduce el
-#             handoff hi-fi e inyecta los 97 establecimientos reales. Viña del
-#             Mar = pines numerados; resto = tarjeta numero + nombre + (RBD),
-#             con anti-colision. Fuentes y logo embebidos en base64.
-# Insumos   : 40_salidas/establecimientos_proyectados.rds
-#             design_handoff_mapa_establecimientos/fonts/*.otf
-#             design_handoff_mapa_establecimientos/assets/logo-color-stacked.png
-# Salidas   : 40_salidas/afiche/mapa_establecimientos.html
+# Proposito : Generar el afiche cartografico (paradigma D) sobre fondo CARTO
+#             Positron REAL. Dos planos: (1) panel norte con Puchuncavi, Quintero
+#             y Concon, donde los establecimientos apretados (vecino < 450 m)
+#             sacan su nombre AL MAR (oeste) con leader line fina y anti-colision,
+#             y los no-apretados llevan el nombre en tierra; (2) inset de Vina del
+#             Mar con zoom y 60 puntos numerados (decision 🔒-2). Numeracion
+#             oficial N->S 1..97 compartida por mapa, inset e indice (🔒-5).
+# Insumos   : 40_salidas/establecimientos_proyectados.rds (de 32; se reusan
+#               lat/lon, nombre, tipo, comuna, rbd; la numeracion se recalcula).
+#             20_insumos/comunas.geojson (limites, campo "Comuna").
+#             Tiles CARTO Positron via maptiles (descarga en linea, cacheada).
+#             fonts/*.otf ; assets/logo-color-stacked.png
+# Salidas   : 40_salidas/afiche/mapa_establecimientos.html (autocontenido)
+#             40_salidas/afiche/panel_norte.png, panel_vina.png (incrustados)
 # Autor     : equipo SLEP Costa Central
 # Fecha     : 2026-06-25
+#
+# NOTA DE ENTORNO: la primera corrida descarga tiles CARTO (red). maptiles cachea
+# en tempdir(). Requiere locale UTF-8 para mapear tipos con tilde (ver MAPEO_TIPO).
 # =============================================================================
 
 # ---- 1. Bootstrapping y configuracion ----
@@ -17,91 +26,383 @@ source(here::here("10_utils", "10_utils.R"))
 source(here::here("10_utils", "10_configuracion.R"))
 
 # ---- 2. Auto-instalacion ----
-instalar_si_falta(c("dplyr", "base64enc", "glue"))
+instalar_si_falta(c("dplyr", "sf", "maptiles", "terra", "ggplot2", "ragg",
+                    "ggrepel", "systemfonts", "base64enc", "glue"))
 
 # ---- 3. Librerias ----
-library(dplyr)
-library(base64enc)
-library(glue)
+suppressMessages({
+  library(dplyr); library(sf); library(maptiles); library(terra)
+  library(ggplot2); library(ragg); library(ggrepel); library(glue)
+})
 
-# ---- 4. Constantes de render ----
-FUENTES <- list(
-  gobCL_Heavy   = file.path(RUTAS$fuentes, "gobCL_Heavy.otf"),
-  gobCL_Regular = file.path(RUTAS$fuentes, "gobCL_Regular.otf"),
-  MuseoSans_300 = file.path(RUTAS$fuentes, "MuseoSans-300.otf"),
-  MuseoSans_500 = file.path(RUTAS$fuentes, "MuseoSans_500.otf")
-)
-# Radio de anti-colision de tarjetas, en unidades % del viewBox.
-COLISION_DY <- 3.0
+# ---- 4. Constantes ----
+TIPO_ORDEN  <- c("jardin", "basica", "liceo", "especial", "adultos")  # 🔒-5 Fase 1
+COMUNAS_CHICAS <- c("Puchuncaví", "Quintero", "Concón")
+COMUNA_INSET   <- "Viña del Mar"
 
-# ---- 5. Funciones ----
+UMBRAL_APRETADO_M <- 450      # vecino mas cercano < 450 m -> etiqueta al mar
+BUFFER_VISUAL_DEG <- 0.004    # 🔒-3: buffer SOLO visual, jamas para filtrar
 
-# Embebe un archivo binario como data URI base64.
+# Lienzo del afiche (1240x1754). Area de mapa = derecha de la lista, sin footer.
+PAD_MAPA   <- 22
+GAP_PANEL  <- 16
+MAPA_W     <- LIENZO$ancho - LIENZO$lista_w - 2 * PAD_MAPA            # 728
+ALTO_BODY  <- LIENZO$alto - LIENZO$header_h - 2 * PAD_MAPA           # 1520
+NORTE_H    <- 944
+VINA_H     <- ALTO_BODY - NORTE_H - GAP_PANEL                        # 560
+ESC        <- 2L              # factor de render (retina)
+
+# Tokens de etiquetas del mapa.
+COL_LEADER <- "#5b6670"; COL_TINTA <- "#2E2230"
+
+# Rutas de PNG de paneles.
+PNG_NORTE <- ruta_salidas("afiche", "panel_norte.png")
+PNG_VINA  <- ruta_salidas("afiche", "panel_vina.png")
+
+# ---- 5. Fuentes para ragg (gobCL ya esta en system_fonts; Museo Sans no) ----
+registrar_fuentes <- function() {
+  ff <- RUTAS$fuentes
+  try(systemfonts::register_font("Museo Sans",
+        plain = file.path(ff, "MuseoSans-300.otf"),
+        bold  = file.path(ff, "MuseoSans_500.otf")), silent = TRUE)
+  try(systemfonts::register_font("gobCL",
+        plain = file.path(ff, "gobCL_Regular.otf"),
+        bold  = file.path(ff, "gobCL_Heavy.otf")), silent = TRUE)
+}
+
+# ---- 6. Utilidades de datos ----
+
+# Numeracion oficial N->S (Fase 1): comuna (N->S) -> tipo -> nombre. Verificable.
+numerar <- function(est) {
+  est <- est |>
+    mutate(
+      comuna_chr = as.character(comuna),
+      comuna_f   = factor(comuna_chr, levels = COMUNAS_ORDEN),
+      tipo_f     = factor(tipo, levels = TIPO_ORDEN)
+    ) |>
+    arrange(comuna_f, tipo_f, nombre) |>
+    mutate(num = row_number(),
+           color = TIPOS$color[match(tipo, TIPOS$key)])
+  # 🔒-5: rangos por comuna exactos y sin huecos/duplicados.
+  stopifnot(identical(sort(est$num), seq_len(nrow(est))))
+  rng <- est |> summarise(lo = min(num), hi = max(num), .by = comuna_chr)
+  esperado <- data.frame(
+    comuna_chr = COMUNAS_ORDEN,
+    lo = c(1, 21, 31, 38), hi = c(20, 30, 37, 97))
+  chk <- merge(rng, esperado, by = "comuna_chr", suffixes = c("", "_e"))
+  stopifnot(all(chk$lo == chk$lo_e), all(chk$hi == chk$hi_e))
+  est
+}
+
+escapar_html <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;",  x, fixed = TRUE)
+  gsub(">", "&gt;", x, fixed = TRUE)
+}
+# No truncar (🔒-1): envuelve a varias lineas en vez de cortar.
+wrap_nombre <- function(x, w = 26)
+  vapply(x, function(s) paste(strwrap(s, width = w), collapse = "\n"), character(1))
+
+# ---- 7. Capa geo: tiles CARTO y ajuste de bbox ----
+
+# Ajusta un bbox 3857 (xmin,xmax,ymin,ymax) al aspect del slot (w/h). Si necesita
+# ancho, crece al oeste (mar, para las etiquetas); si alto, crece simetrico.
+fit_bbox_3857 <- function(b, aspect, grow_west = TRUE) {
+  w <- b[2] - b[1]; h <- b[4] - b[3]; cur <- w / h
+  if (cur < aspect) {
+    d <- aspect * h - w
+    if (grow_west) b[1] <- b[1] - d else { b[1] <- b[1] - d/2; b[2] <- b[2] + d/2 }
+  } else {
+    d <- w / aspect - h; b[3] <- b[3] - d/2; b[4] <- b[4] + d/2
+  }
+  b
+}
+
+# bbox 4326 (xmin,xmax,ymin,ymax) -> bbox 3857 (xmin,xmax,ymin,ymax).
+bbox_a_3857 <- function(b4) {
+  poly <- st_as_sfc(st_bbox(c(xmin=b4[1], ymin=b4[3], xmax=b4[2], ymax=b4[4]), crs = 4326))
+  as.numeric(st_bbox(st_transform(poly, 3857)))[c(1, 3, 2, 4)]
+}
+
+# Descarga tiles CARTO Positron que cubren un bbox 3857; devuelve imagen + extent.
+get_carto_3857 <- function(b, zoom) {
+  poly <- st_as_sfc(st_bbox(c(xmin = b[1], ymin = b[3], xmax = b[2], ymax = b[4]),
+                            crs = 3857))
+  tiles <- maptiles::get_tiles(poly, provider = "CartoDB.Positron",
+                               zoom = zoom, crop = TRUE, cachedir = tempdir())
+  arr <- terra::as.array(tiles)
+  img <- matrix(grDevices::rgb(arr[, , 1], arr[, , 2], arr[, , 3], maxColorValue = 255),
+                nrow = dim(arr)[1])
+  list(img = img, e = as.vector(terra::ext(tiles)))
+}
+
+# Dispersion leve (declustering radial) por grupo: separa puntos encimados a una
+# distancia visual minima conservando la ubicacion real lo mas posible.
+decluster <- function(df, dmin, por_comuna = TRUE, iters = 140) {
+  X <- df$X; Y <- df$Y
+  grupos <- if (por_comuna) split(seq_len(nrow(df)), df$comuna_chr)
+            else list(seq_len(nrow(df)))
+  for (idx in grupos) {
+    k <- length(idx); if (k < 2) next
+    for (t in seq_len(k)) {                    # semilla determinista coincidentes
+      i <- idx[order(df$num[idx])[t]]
+      X[i] <- X[i] + cos(2*pi*t/k) * dmin * 0.01
+      Y[i] <- Y[i] + sin(2*pi*t/k) * dmin * 0.01
+    }
+    for (it in seq_len(iters)) {
+      moved <- FALSE
+      for (a in 1:(k-1)) for (b in (a+1):k) {
+        i <- idx[a]; j <- idx[b]
+        dx <- X[i]-X[j]; dy <- Y[i]-Y[j]; d <- sqrt(dx*dx + dy*dy)
+        if (d < dmin && d > 1e-9) {
+          push <- (dmin - d)/2
+          X[i] <- X[i]+dx/d*push; Y[i] <- Y[i]+dy/d*push
+          X[j] <- X[j]-dx/d*push; Y[j] <- Y[j]-dy/d*push; moved <- TRUE
+        }
+      }
+      if (!moved) break
+    }
+  }
+  df$X <- X; df$Y <- Y; df
+}
+
+# ---- 8. Render del panel norte (paradigma D: el corazon del encargo) ----
+render_panel_norte <- function(est) {
+  chicas <- est |> filter(comuna_chr %in% COMUNAS_CHICAS)
+  pc <- st_as_sf(chicas, coords = c("longitud", "latitud"), crs = 4326)
+
+  # bbox: margen oeste amplio (mar) + ajuste al aspect del slot creciendo al oeste.
+  bb <- as.numeric(st_bbox(pc))                                  # xmin ymin xmax ymax
+  b4 <- c(bb[1]-0.075, bb[2]-0.020, bb[3]+0.020, bb[4]+0.015)    # xmin ymin xmax ymax
+  b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))               # -> xmin xmax ymin ymax
+  b3 <- fit_bbox_3857(b3, MAPA_W / NORTE_H, grow_west = TRUE)
+  tl <- get_carto_3857(b3, zoom = 12)
+  Xr <- b3[2]-b3[1]; Yr <- b3[4]-b3[3]
+
+  # puntos a 3857 + dispersion leve.
+  xy <- st_coordinates(st_transform(pc, 3857))
+  chicas$X <- xy[,1]; chicas$Y <- xy[,2]
+  chicas <- decluster(chicas, dmin = 0.013 * Xr)
+
+  # apretado: vecino mas cercano en metros (UTM 19S), por comuna.
+  um <- st_coordinates(st_transform(pc, 32719))
+  chicas$mx <- um[,1]; chicas$my <- um[,2]; chicas$nn <- Inf
+  for (cc in unique(chicas$comuna_chr)) {
+    id <- which(chicas$comuna_chr == cc)
+    if (length(id) > 1) {
+      D <- as.matrix(dist(cbind(chicas$mx[id], chicas$my[id]))); diag(D) <- Inf
+      chicas$nn[id] <- apply(D, 1, min)
+    }
+  }
+  chicas$apretado <- chicas$nn < UMBRAL_APRETADO_M
+
+  # etiquetas al mar: columna unica al oeste, anti-colision 1D por latitud.
+  x_sea <- b3[1] + 0.34 * Xr
+  gap   <- Yr / 28
+  mar <- chicas |> filter(apretado) |> arrange(Y)
+  if (nrow(mar) > 0) {
+    yv <- mar$Y
+    for (i in seq_len(nrow(mar))[-1]) if (yv[i]-yv[i-1] < gap) yv[i] <- yv[i-1]+gap
+    over  <- max(yv) - (b3[4] - 0.02*Yr); if (over  > 0) yv <- yv - over
+    under <- (b3[3] + 0.02*Yr) - min(yv); if (under > 0) yv <- yv + under
+    mar$y_et <- yv
+    mar$etiqueta <- paste0(mar$num, "  ", wrap_nombre(mar$nombre))
+  }
+  tierra <- chicas |> filter(!apretado) |>
+    mutate(etiqueta = paste0(num, "  ", nombre))
+
+  g <- ggplot() +
+    annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
+    geom_segment(data = mar, aes(x = X, y = Y, xend = x_sea, yend = y_et),
+                 color = COL_LEADER, linewidth = 0.3) +
+    geom_label(data = mar, aes(x = x_sea, y = y_et, label = etiqueta),
+               hjust = 1, vjust = 0.5, size = 2.4, family = "Museo Sans",
+               lineheight = 0.9, label.size = 0.15,
+               label.padding = unit(1.3, "pt"), label.r = unit(2, "pt"),
+               fill = "white", color = COL_TINTA) +
+    ggrepel::geom_label_repel(data = tierra, aes(X, Y, label = etiqueta),
+               size = 2.4, family = "Museo Sans", color = COL_TINTA,
+               xlim = c(b3[1] + 0.40*Xr, b3[2]), ylim = c(b3[3], b3[4]),
+               box.padding = 0.35, point.padding = 0.25, label.size = 0.15,
+               label.padding = unit(1.3, "pt"), label.r = unit(2, "pt"),
+               fill = "white", segment.size = 0.25, segment.color = COL_LEADER,
+               min.segment.length = 0, seed = 42, max.overlaps = Inf,
+               max.time = 1.5, max.iter = 40000) +
+    geom_point(data = chicas, aes(X, Y), shape = 21, fill = chicas$color,
+               color = "white", size = 4.4, stroke = 1) +
+    geom_text(data = chicas, aes(X, Y, label = num), color = "white",
+              family = "gobCL", fontface = "bold", size = 2.5) +
+    coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
+    theme_void()
+
+  ragg::agg_png(PNG_NORTE, width = MAPA_W*ESC, height = NORTE_H*ESC,
+                units = "px", res = 72*ESC, background = "white")
+  print(g); grDevices::dev.off()
+  list(mar = nrow(mar), tierra = nrow(tierra))
+}
+
+# ---- 9. Render del inset Vina (🔒-2) ----
+render_panel_vina <- function(est) {
+  vina <- est |> filter(comuna_chr == COMUNA_INSET)
+  pc <- st_as_sf(vina, coords = c("longitud", "latitud"), crs = 4326)
+  bb <- as.numeric(st_bbox(pc))
+  b4 <- c(bb[1]-0.012, bb[2]-0.010, bb[3]+0.012, bb[4]+0.010)
+  b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))
+  b3 <- fit_bbox_3857(b3, MAPA_W / VINA_H, grow_west = FALSE)
+  tl <- get_carto_3857(b3, zoom = 13)
+  Xr <- b3[2]-b3[1]
+
+  xy <- st_coordinates(st_transform(pc, 3857))
+  vina$X <- xy[,1]; vina$Y <- xy[,2]
+  vina$comuna_chr <- "v"
+  vina <- decluster(vina, dmin = 0.022 * Xr, por_comuna = FALSE)
+
+  g <- ggplot() +
+    annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
+    geom_point(data = vina, aes(X, Y), shape = 21, fill = vina$color,
+               color = "white", size = 5.2, stroke = 1.1) +
+    geom_text(data = vina, aes(X, Y, label = num), color = "white",
+              family = "gobCL", fontface = "bold", size = 2.7) +
+    coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
+    theme_void()
+
+  ragg::agg_png(PNG_VINA, width = MAPA_W*ESC, height = VINA_H*ESC,
+                units = "px", res = 72*ESC, background = "white")
+  print(g); grDevices::dev.off()
+  invisible(NULL)
+}
+
+# ---- 10. Chrome HTML (header, indice N->S, leyenda, logo) ----
 data_uri <- function(ruta, mime) {
-  if (!file.exists(ruta)) stop("No existe el asset: ", ruta)
+  if (!file.exists(ruta)) { warning("No existe asset: ", ruta, call. = FALSE); return("") }
   paste0("data:", mime, ";base64,", base64enc::base64encode(ruta))
 }
-
-# Bloque @font-face con las 4 fuentes embebidas.
 bloque_fontface <- function() {
-  ff <- function(fam, peso, key) glue(
-    "@font-face{{font-family:'{fam}';src:url({uri}) format('opentype');font-weight:{peso}}}",
-    uri = data_uri(FUENTES[[key]], "font/otf")
-  )
+  ff <- function(fam, peso, archivo) {
+    uri <- data_uri(file.path(RUTAS$fuentes, archivo), "font/otf")
+    if (identical(uri, "")) return("")
+    glue("@font-face{{font-family:'{fam}';src:url({uri}) format('opentype');font-weight:{peso};font-display:swap}}")
+  }
+  piezas <- c(ff("gobCL", 900, "gobCL_Heavy.otf"), ff("gobCL", 400, "gobCL_Regular.otf"),
+              ff("Museo Sans", 300, "MuseoSans-300.otf"), ff("Museo Sans", 500, "MuseoSans_500.otf"))
+  paste(piezas[piezas != ""], collapse = "\n")
+}
+
+# Una fila del indice: dot de color por tipo + numero + nombre (sin truncar).
+fila_indice <- function(num, nombre, color) {
+  glue('<div style="display:flex;align-items:baseline;gap:6px;padding:1px 0;break-inside:avoid">
+<span style="width:7px;height:7px;border-radius:50%;background:{color};flex:none;transform:translateY(1px)"></span>
+<span style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:10px;color:{TOKENS$tinta_fuerte};min-width:15px;text-align:right">{num}</span>
+<span style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10px;line-height:1.2;color:{TOKENS$tinta_media1}">{escapar_html(nombre)}</span>
+</div>')
+}
+seccion_indice <- function(est, comuna_nom, columnas = 1) {
+  # filtra por el nombre de comuna; .env evita el data-masking con la columna 'comuna'.
+  sub <- est |> filter(comuna_chr == .env$comuna_nom) |> arrange(num)
+  filas <- vapply(seq_len(nrow(sub)), function(i)
+    fila_indice(sub$num[i], sub$nombre[i], sub$color[i]), character(1))
+  cols_css <- if (columnas > 1)
+    glue("column-count:{columnas};column-gap:14px;") else ""
+  glue('<div style="margin-bottom:9px">
+<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:12.5px;color:{TOKENS$ciruela};border-bottom:1px solid {TOKENS$linea2};padding-bottom:2px;margin-bottom:4px">{comuna_nom} <span style="color:{TOKENS$muted};font-weight:400">({nrow(sub)})</span></div>
+<div style="{cols_css}">{paste(filas, collapse="")}</div>
+</div>')
+}
+construir_indice <- function(est) {
   paste(
-    ff("gobCL", 900, "gobCL_Heavy"),
-    ff("gobCL", 400, "gobCL_Regular"),
-    ff("Museo Sans", 300, "MuseoSans_300"),
-    ff("Museo Sans", 500, "MuseoSans_500"),
-    sep = "\n"
-  )
+    seccion_indice(est, "Puchuncaví",   1),
+    seccion_indice(est, "Quintero",     1),
+    seccion_indice(est, "Concón",       1),
+    seccion_indice(est, "Viña del Mar", 2),
+    collapse = "\n")
+}
+construir_leyenda <- function(est) {
+  items <- vapply(seq_len(nrow(TIPOS)), function(i) {
+    t <- TIPOS[i, ]; n <- sum(est$tipo == t$key)
+    glue('<div style="display:flex;align-items:center;gap:7px">
+<span style="width:11px;height:11px;border-radius:50%;background:{t$color};flex:none"></span>
+<span style="font-family:\'Museo Sans\',sans-serif;font-weight:500;font-size:10.5px;color:{TOKENS$tinta_media1}">{t$label} <span style="color:{TOKENS$muted};font-weight:300">({n})</span></span>
+</div>')
+  }, character(1))
+  glue('<div style="display:flex;flex-wrap:wrap;gap:6px 16px">{paste(items, collapse="")}</div>')
 }
 
-# Anti-colision vertical simple: dentro de cada comuna de tarjetas, si dos
-# puntos quedan a < COLISION_DY en y, se separan. No trunca nombres (regla 1).
-separar_tarjetas <- function(df) {
-  df |>
-    arrange(comuna, y) |>
-    group_by(comuna) |>
-    mutate(y = {
-      yy <- y
-      if (length(yy) > 1) for (i in 2:length(yy)) {
-        if (yy[i] - yy[i - 1] < COLISION_DY) yy[i] <- yy[i - 1] + COLISION_DY
-      }
-      yy
-    }) |>
-    ungroup()
-}
-
-# SVG de costa estilizada (replica de Mapa.dc.html).
-svg_costa <- function() {
+generar_html <- function(est) {
+  logo_uri <- data_uri(RUTAS$logo, "image/png")
+  logo_tag <- if (identical(logo_uri, ""))
+    glue('<div style="height:120px;width:190px;display:flex;align-items:center;justify-content:center;border:1px dashed {TOKENS$linea2};color:{TOKENS$muted};font-size:12px">[logo SLEP]</div>')
+  else glue('<img src="{logo_uri}" style="height:120px;width:auto;display:block"/>')
+  norte_uri <- data_uri(PNG_NORTE, "image/png")
+  vina_uri  <- data_uri(PNG_VINA,  "image/png")
   t <- TOKENS
-  glue('<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;display:block">
-<rect width="100" height="100" fill="{t$papel}"></rect>
-<path d="M0,0 L24,0 C22,9 25,16 19,22 C13,28 11,36 21,44 C27,48 24,56 19,63 C15,69 20,78 13,87 C9,93 11,97 15,100 L0,100 Z" fill="{t$oceano}"></path>
-<path d="M24,0 C22,9 25,16 19,22 C13,28 11,36 21,44 C27,48 24,56 19,63 C15,69 20,78 13,87 C9,93 11,97 15,100" fill="none" stroke="{t$costa}" stroke-width="0.7"></path>
-<path d="M21,27 L100,27" stroke="{t$sep_comuna}" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path>
-<path d="M22,52 L100,52" stroke="{t$sep_comuna}" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path>
-<path d="M17,76 L100,76" stroke="{t$sep_comuna}" stroke-width="0.5" stroke-dasharray="2.2 2.4"></path></svg>')
+
+  glue('<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><style>
+{bloque_fontface()}
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{margin:0;background:{t$pagina}}}
+@page{{size:{LIENZO$ancho}px {LIENZO$alto}px;margin:0}}
+</style></head><body>
+<div style="width:{LIENZO$ancho}px;height:{LIENZO$alto}px;background:{t$papel};margin:0 auto;display:flex;flex-direction:column;font-family:\'Museo Sans\',sans-serif">
+
+<div style="height:{LIENZO$header_h}px;flex:none;display:flex;align-items:center;gap:30px;padding:0 48px;border-bottom:2px solid {t$ciruela}">
+{logo_tag}
+<div style="width:1px;height:96px;background:{t$linea2}"></div>
+<div>
+<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:34px;letter-spacing:-.01em;color:{t$ciruela};line-height:1.04">Mapa de establecimientos educacionales</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:15px;color:{t$bajada};margin-top:5px">SLEP Costa Central · Puchuncaví · Quintero · Concón · Viña del Mar · 97 establecimientos</div>
+</div>
+</div>
+
+<div style="flex:1;display:flex;min-height:0">
+<aside style="width:{LIENZO$lista_w}px;flex:none;border-right:1px solid {t$linea1};padding:18px 22px;display:flex;flex-direction:column;overflow:hidden">
+<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:16px;color:{t$tinta_fuerte};margin-bottom:3px">Índice de establecimientos</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10.5px;line-height:1.4;color:{t$bajada};margin-bottom:9px">Numeración norte→sur. Cada número del mapa corresponde a un establecimiento; el índice es de respaldo.</div>
+<div style="margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid {t$linea2}">{construir_leyenda(est)}</div>
+<div style="flex:1;overflow:hidden">{construir_indice(est)}</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:8.5px;color:{t$muted};margin-top:8px;padding-top:6px;border-top:1px solid {t$linea3}">Fondo cartográfico © OpenStreetMap · © CARTO (Positron). Establecimientos: maestro SLEP Costa Central.</div>
+</aside>
+
+<div style="flex:1;min-width:0;padding:{PAD_MAPA}px;display:flex;flex-direction:column;gap:{GAP_PANEL}px">
+<div style="position:relative;width:100%;height:{NORTE_H}px;border:1px solid {t$linea2};border-radius:8px;overflow:hidden">
+<div style="position:absolute;top:8px;left:10px;z-index:2;font-family:\'gobCL\',sans-serif;font-weight:900;font-size:13px;color:{t$ciruela};background:rgba(255,255,255,.82);padding:2px 8px;border-radius:5px">Puchuncaví · Quintero · Concón</div>
+<img src="{norte_uri}" style="display:block;width:100%;height:100%;object-fit:cover"/>
+</div>
+<div style="position:relative;width:100%;height:{VINA_H}px;border:1px solid {t$linea2};border-radius:8px;overflow:hidden">
+<div style="position:absolute;top:8px;left:10px;z-index:2;font-family:\'gobCL\',sans-serif;font-weight:900;font-size:13px;color:{t$ciruela};background:rgba(255,255,255,.82);padding:2px 8px;border-radius:5px">Viña del Mar · ampliación (60)</div>
+<img src="{vina_uri}" style="display:block;width:100%;height:100%;object-fit:cover"/>
+</div>
+</div>
+</div>
+</div>
+</body></html>')
 }
 
-# (Builders de leyenda, tarjetas, pines y ensamblado del afiche completo se
-# implementan en la sesion de construccion; este stub deja la arquitectura,
-# los tokens y la API fijados. Ver traspaso para el plan del paso 4.)
-generar_afiche <- function(est) {
-  stop("generar_afiche(): pendiente de implementacion en la sesion de construccion. ",
-       "La arquitectura (separar_tarjetas, svg_costa, bloque_fontface, data_uri) ya esta lista.")
-}
-
-# ---- 6. Flujo principal ----
+# ---- 11. Flujo principal ----
 if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   entrada <- ruta_salidas("establecimientos_proyectados.rds")
   if (!file.exists(entrada)) stop("Falta 32. Corre run_all(to = 2) primero.")
   est <- readRDS(entrada)
-  log_msg("Generando afiche (stub)...", origen = "33_afiche")
-  # html <- generar_afiche(est)
-  # salida <- ruta_salidas("afiche", "mapa_establecimientos.html")
-  # writeLines(html, salida, useBytes = TRUE)
-  log_msg("Stub de generador en su lugar. Implementacion del HTML en proxima sesion.",
-          nivel = "WARN", origen = "33_afiche")
+  log_msg(sprintf("Generando afiche con %d establecimientos...", nrow(est)),
+          origen = "33_afiche")
+
+  registrar_fuentes()
+  est <- numerar(est)
+  log_msg("Numeracion N->S 1..97 verificada (rangos por comuna).", origen = "33_afiche")
+
+  dir.create(RUTAS$salidas_afiche, showWarnings = FALSE, recursive = TRUE)
+  res <- render_panel_norte(est)
+  log_msg(sprintf("Panel norte: %d etiquetas al mar, %d en tierra.",
+                  res$mar, res$tierra), origen = "33_afiche")
+  render_panel_vina(est)
+  log_msg("Inset Vina (60 puntos) renderizado.", origen = "33_afiche")
+
+  html <- generar_html(est)
+  salida <- ruta_salidas("afiche", "mapa_establecimientos.html")
+  tmp <- paste0(salida, ".tmp")
+  writeLines(html, tmp, useBytes = TRUE)
+  file.rename(tmp, salida)
+  log_msg(sprintf("Afiche generado en %s", salida), origen = "33_afiche")
+  log_msg("Para exportar a PDF: pagedown::chrome_print(<html>, <pdf>).",
+          origen = "33_afiche")
 }

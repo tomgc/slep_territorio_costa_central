@@ -26,3 +26,8 @@ _archivo/
 
 # Artefactos intermedios del pipeline (se regeneran; el HTML/PDF final si se versiona)
 40_salidas/*.rds
+# PNG de paneles del afiche: se regeneran y van incrustados (base64) en el HTML final
+40_salidas/afiche/panel_*.png
+40_salidas/afiche/cache_mapa_base.rds
+# Scratch de desarrollo del afiche
+scratchpad_afiche/
