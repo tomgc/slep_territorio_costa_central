@@ -350,7 +350,7 @@ body{{margin:0;background:{t$pagina}}}
 <div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10.5px;line-height:1.4;color:{t$bajada};margin-bottom:9px">Numeración norte→sur. Cada número del mapa corresponde a un establecimiento; el índice es de respaldo.</div>
 <div style="margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid {t$linea2}">{construir_leyenda(est)}</div>
 <div style="flex:1;overflow:hidden">{construir_indice(est)}</div>
-<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:8.5px;color:{t$muted};margin-top:8px;padding-top:6px;border-top:1px solid {t$linea3}">Fondo cartográfico © OpenStreetMap · © CARTO (Positron). Establecimientos: maestro SLEP Costa Central.</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:8.5px;color:{t$muted};margin-top:8px;padding-top:6px;border-top:1px solid {t$linea3}">Fondo cartográfico © OpenStreetMap · © CARTO (Positron). Límites comunales: Biblioteca del Congreso Nacional de Chile (BCN). Establecimientos: maestro SLEP Costa Central.</div>
 </aside>
 
 <div style="flex:1;min-width:0;padding:{PAD_MAPA}px;display:flex;flex-direction:column;gap:{GAP_PANEL}px">
