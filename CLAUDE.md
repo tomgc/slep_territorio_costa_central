@@ -30,12 +30,13 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Tile sin rótulos + etiquetas de comuna propias** (v7): tile `CartoDB.PositronNoLabels`
-   (geografía sin texto horneado); se eliminaron las zonas de exclusión (la repulsión entre
-   pines se mantiene, 🔒); 4 etiquetas de comuna propias (`ETIQUETAS_COMUNA`) en azul gobCL
-   (`COLOR_COMUNA=#0F69B4`, `LABEL_COMUNA_FONT`), en vacíos sin pines.
-2. **Numeración N→S estricta + nota + índice a alto completo** (v6): 1-97 por latitud pura.
-3. **Pines grandes + anti-colisión 2D garantizada** (v4): círculo real en datos, min_dist 48px ≥ 44.
-4. **Límites comunales BCN** (alta resolución), recortado de `comunas_bcn/` (gitignored).
-   Mapa con pines numerados; índice (izq) con número+nombre+RBD; inset de Viña.
+1. **Exportación a PDF A0 vertical** (v8): `@page` 841×1189 mm + `zoom` (lleva el lienzo px
+   a A0, texto sigue vectorial), PNG de mapas a `DPI_A0`=200 (`ESC` derivado; `PIN_RADIO_PX`/
+   `PIN_GAP_PX` escalan con ESC para conservar proporción). `chrome_print` → PDF con fuentes
+   incrustadas (verificado con `pdftools`: pagesize A0, texto seleccionable, gobCL+MuseoSans
+   embedded). PDF (~3 MB) gitignored; HTML versionado.
+2. **Tile sin rótulos + etiquetas de comuna propias** (v7): `CartoDB.PositronNoLabels`; 4
+   etiquetas azul gobCL (`ETIQUETAS_COMUNA`, `COLOR_COMUNA`); zonas de exclusión eliminadas.
+3. **Numeración N→S estricta + nota + índice a alto completo** (v6): 1-97 por latitud pura.
+4. **Pines grandes + anti-colisión 2D garantizada** (v4); **límites BCN** (v3); índice con RBD.
 5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
