@@ -29,10 +29,11 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. Reescrito `33_generar_afiche.R`: afiche **paradigma D** sobre CARTO Positron real (dos
-   planos: panel norte con etiquetas al mar + leader lines anti-colisión; inset Viña).
-2. Fix data-masking en índice (`filter(comuna_chr == comuna)` ensombrecía la columna →
-   índice ×4); detectado por el panel adversarial. Ahora `.env$comuna_nom`.
-3. Agregado insumo `20_insumos/comunas.geojson` (límites comunales).
-4. `.gitignore`: ignora `40_salidas/afiche/panel_*.png` y `scratchpad_afiche/`.
-5. Numeración N→S 1..97 generada por código en 33 (Fase 1) con verificación de rangos.
+1. **Poda v2 del afiche** (`33_generar_afiche.R`): mapa con SOLO pines numerados sobre
+   CARTO Positron + límites comunales visibles (geom_path). Se quitaron etiquetas al mar,
+   en tierra, ggrepel, leader lines y la lógica de apretado/NN. Colores de pin v2.
+2. Índice (izquierda) ahora lleva **número + nombre + RBD**; leyenda con colores v2.
+3. Reescrito antes como paradigma D (etiquetas al mar); v2 simplifica a pines (el titular
+   pondrá los nombres a mano sobre el mapa).
+4. Fix data-masking en índice (`filter(comuna_chr == comuna)` → `.env$comuna_nom`).
+5. Insumo `20_insumos/comunas.geojson` (límites comunales) usado para contornos y carga.
