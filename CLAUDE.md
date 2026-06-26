@@ -23,20 +23,19 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
 ## Convenciones
 - Commits atómicos temáticos, mensajes en español. Comentarios de código en español.
 - snake_case sin tildes/ñ/espacios en nombres de archivo.
-- Numeración oficial N→S (comuna por latitud media → tipo → nombre alfabético), 1..97,
-  compartida por mapa, inset e índice. Verificada con `stopifnot` y panel adversarial.
+- Numeración oficial N→S **estricta por latitud** (más al norte = 1, más al sur = 97;
+  el tipo NO influye en el orden, solo en el color), 1..97, compartida por mapa, inset e
+  índice. Rangos por comuna 1-20/21-30/31-37/38-97. Verificada con `stopifnot` + panel adversarial.
 - Los PNG de paneles del afiche se regeneran y van incrustados (base64) en el HTML; el
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Pines grandes + anti-colisión 2D garantizada** (v4): pin único grande (`PIN_RADIO_PX`)
-   con número de fuente única (`PIN_FONT`), dibujado como círculo real en datos. La
-   separación 2D (`separar_pines`, en px) garantiza centros ≥ 2·PIN_RADIO (verificado:
-   min_dist 48px ≥ 44). Zonas de exclusión (`ZONAS_NORTE/_VINA`) impiden tapar los rótulos
-   de ciudad del tile (Quintero, Concón, etc.). Gate si los pines no caben.
-2. **Límites comunales BCN** (alta resolución): `comunas.geojson` regenerado desde el
-   shapefile BCN (`comunas_bcn/`, gitignored), recortado a 4 comunas. Atribución BCN.
-3. **Afiche v2**: mapa con pines numerados sobre CARTO + límites BCN; índice (izquierda)
-   con número + nombre + RBD. Sin etiquetas de texto ni leader lines en el mapa.
-4. Numeración N→S 1..97 (comuna por latitud → tipo → nombre); inset de Viña.
+1. **Numeración N→S estricta + nota + índice** (v6): `numerar()` ordena 1-97 por latitud
+   pura (sin agrupar por tipo); rangos por comuna se mantienen. Nota de fuente con el texto
+   del Área de Monitoreo. Índice: fuente mayor (`INDICE_FONT`) y `space-between` para llenar
+   el alto sin hueco; sin truncar (tope por no-overflow).
+2. **Pines grandes + anti-colisión 2D garantizada** (v4): círculo real en datos, centros
+   ≥ 2·PIN_RADIO (min_dist 48px ≥ 44). Zonas de exclusión de rótulos de ciudad del tile.
+3. **Límites comunales BCN** (alta resolución), recortado de `comunas_bcn/` (gitignored).
+4. Mapa con pines numerados sobre CARTO + límites BCN; índice (izq) con número+nombre+RBD.
 5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
