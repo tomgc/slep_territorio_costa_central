@@ -29,12 +29,14 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Límites comunales BCN** (alta resolución): `20_insumos/comunas.geojson` se regeneró
-   desde el shapefile BCN (`comunas_bcn/comunas.shp`, 61 MB, gitignored) recortado a las 4
-   comunas y reproyectado a 4326. Resuelve solapes/cruces de fcortes (vértices 6→3470 etc.).
-   Atribución BCN agregada a la nota de fuente. `cargar_comunas()` no cambió (campo `Comuna`).
-2. **Poda v2 del afiche**: mapa con SOLO pines numerados sobre CARTO Positron + límites
-   comunales visibles (geom_path). Sin etiquetas al mar/tierra, ggrepel ni leader lines.
-3. Índice (izquierda) lleva **número + nombre + RBD**; colores de pin v2.
-4. Fix data-masking en índice (`filter(comuna_chr == comuna)` → `.env$comuna_nom`).
+1. **Pines grandes + anti-colisión 2D garantizada** (v4): pin único grande (`PIN_RADIO_PX`)
+   con número de fuente única (`PIN_FONT`), dibujado como círculo real en datos. La
+   separación 2D (`separar_pines`, en px) garantiza centros ≥ 2·PIN_RADIO (verificado:
+   min_dist 48px ≥ 44). Zonas de exclusión (`ZONAS_NORTE/_VINA`) impiden tapar los rótulos
+   de ciudad del tile (Quintero, Concón, etc.). Gate si los pines no caben.
+2. **Límites comunales BCN** (alta resolución): `comunas.geojson` regenerado desde el
+   shapefile BCN (`comunas_bcn/`, gitignored), recortado a 4 comunas. Atribución BCN.
+3. **Afiche v2**: mapa con pines numerados sobre CARTO + límites BCN; índice (izquierda)
+   con número + nombre + RBD. Sin etiquetas de texto ni leader lines en el mapa.
+4. Numeración N→S 1..97 (comuna por latitud → tipo → nombre); inset de Viña.
 5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
