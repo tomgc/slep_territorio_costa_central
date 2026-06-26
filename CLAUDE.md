@@ -29,11 +29,12 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Poda v2 del afiche** (`33_generar_afiche.R`): mapa con SOLO pines numerados sobre
-   CARTO Positron + límites comunales visibles (geom_path). Se quitaron etiquetas al mar,
-   en tierra, ggrepel, leader lines y la lógica de apretado/NN. Colores de pin v2.
-2. Índice (izquierda) ahora lleva **número + nombre + RBD**; leyenda con colores v2.
-3. Reescrito antes como paradigma D (etiquetas al mar); v2 simplifica a pines (el titular
-   pondrá los nombres a mano sobre el mapa).
+1. **Límites comunales BCN** (alta resolución): `20_insumos/comunas.geojson` se regeneró
+   desde el shapefile BCN (`comunas_bcn/comunas.shp`, 61 MB, gitignored) recortado a las 4
+   comunas y reproyectado a 4326. Resuelve solapes/cruces de fcortes (vértices 6→3470 etc.).
+   Atribución BCN agregada a la nota de fuente. `cargar_comunas()` no cambió (campo `Comuna`).
+2. **Poda v2 del afiche**: mapa con SOLO pines numerados sobre CARTO Positron + límites
+   comunales visibles (geom_path). Sin etiquetas al mar/tierra, ggrepel ni leader lines.
+3. Índice (izquierda) lleva **número + nombre + RBD**; colores de pin v2.
 4. Fix data-masking en índice (`filter(comuna_chr == comuna)` → `.env$comuna_nom`).
-5. Insumo `20_insumos/comunas.geojson` (límites comunales) usado para contornos y carga.
+5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
