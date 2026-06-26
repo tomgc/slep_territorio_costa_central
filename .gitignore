@@ -31,3 +31,5 @@ _archivo/
 40_salidas/afiche/cache_mapa_base.rds
 # Scratch de desarrollo del afiche
 scratchpad_afiche/
+# Shapefile BCN crudo (61 MB): se recorta a comunas.geojson liviano y se versiona ese
+20_insumos/comunas_bcn/
