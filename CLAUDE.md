@@ -30,11 +30,15 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Exportación a PDF A0 vertical** (v8): `@page` 841×1189 mm + `zoom` (lleva el lienzo px
-   a A0, texto sigue vectorial), PNG de mapas a `DPI_A0`=200 (`ESC` derivado; `PIN_RADIO_PX`/
-   `PIN_GAP_PX` escalan con ESC para conservar proporción). `chrome_print` → PDF con fuentes
-   incrustadas (verificado con `pdftools`: pagesize A0, texto seleccionable, gobCL+MuseoSans
-   embedded). PDF (~3 MB) gitignored; HTML versionado.
+1. **Etiquetas de comuna como texto HTML** (v9): las 4 etiquetas (`ETIQUETAS_COMUNA`) salieron
+   del PNG (`geom_text`) y se posicionan como texto HTML `position:absolute` sobre cada panel
+   (`etiquetas_pct` lon/lat→% vía bbox 3857; `etiquetas_html`), `LABEL_COMUNA_PX`. Ahora son
+   editables/reposicionables en Affinity (verificado: texto extraíble en el PDF). Pines,
+   números, límites siguen en el PNG.
+2. **Exportación a PDF A0 vertical** (v8): `@page` 841×1189 mm + `zoom` (texto vectorial),
+   PNG de mapas a `DPI_A0`=200 (`ESC` derivado; `PIN_RADIO_PX`/`PIN_GAP_PX` escalan con ESC).
+   `chrome_print` → PDF, fuentes incrustadas (pdftools: pagesize A0, gobCL+MuseoSans embedded).
+   PDF (~3 MB) gitignored; HTML versionado.
 2. **Tile sin rótulos + etiquetas de comuna propias** (v7): `CartoDB.PositronNoLabels`; 4
    etiquetas azul gobCL (`ETIQUETAS_COMUNA`, `COLOR_COMUNA`); zonas de exclusión eliminadas.
 3. **Numeración N→S estricta + nota + índice a alto completo** (v6): 1-97 por latitud pura.
