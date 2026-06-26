@@ -247,18 +247,26 @@ circulos <- function(cx, cy, r, fill, id, nseg = 44) {
                grp = id[i], fill = fill[i])))
 }
 
-# Proyecta etiquetas de comuna (lon/lat) a coordenadas 3857 para geom_text.
-etiquetas_xy <- function(et) {
-  if (nrow(et) == 0) return(et)
+# Convierte etiquetas de comuna (lon/lat) a posicion % (left/top) sobre el panel,
+# usando el bbox 3857 REAL del render (misma proyeccion Mercator que el PNG), para
+# que el texto HTML caiga exactamente donde el render ubica el punto. (v9)
+etiquetas_pct <- function(et, b3) {
+  if (nrow(et) == 0)
+    return(data.frame(nom = character(0), left = numeric(0), top = numeric(0)))
   p <- st_coordinates(st_transform(
     st_as_sf(et, coords = c("lon", "lat"), crs = 4326), 3857))
-  et$X <- p[,1]; et$Y <- p[,2]; et
+  data.frame(nom  = et$nom,
+             left = (p[,1] - b3[1]) / (b3[2] - b3[1]) * 100,
+             top  = (b3[4] - p[,2]) / (b3[4] - b3[3]) * 100,
+             stringsAsFactors = FALSE)
 }
 
 # Dibuja un plano: proyecta -> px -> separa (anti-colision 2D) -> datos -> circulos
-# + numeros sobre tiles + limites + etiquetas de comuna propias. GATE: si no logra
-# no-solape o empuja pines fuera del marco, PARA con numeros (no fuerza).
-dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, etiquetas, out) {
+# + numeros sobre tiles + limites. Las etiquetas de comuna YA NO van aqui (v9): se
+# colocan como texto HTML sobre el contenedor (ver generar_html). Devuelve b3 para
+# que el HTML calcule la posicion % de las etiquetas. GATE: si no hay no-solape o
+# empuja pines fuera del marco, PARA con numeros (no fuerza).
+dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, out) {
   Wpx <- MAPA_W*ESC; Hpx <- H*ESC; Xr <- b3[2]-b3[1]; Yr <- b3[4]-b3[3]
   pc <- st_as_sf(sub, coords = c("longitud", "latitud"), crs = 4326)
   xy <- st_coordinates(st_transform(pc, 3857)); sub$X <- xy[,1]; sub$Y <- xy[,2]
@@ -276,7 +284,6 @@ dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, etiquetas, out) {
   rdat <- PIN_RADIO_PX * Xr/Wpx
   poly <- circulos(cxd, cyd, rdat, sub$color, sub$num)
   bord <- comuna_paths(com_sf, comunas)
-  et   <- etiquetas_xy(etiquetas)
   g <- ggplot() +
     annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
     geom_path(data = bord, aes(X, Y, group = grp),
@@ -287,13 +294,11 @@ dibujar_pines <- function(sub, b3, H, tl, com_sf, comunas, etiquetas, out) {
     geom_text(data = data.frame(X = cxd, Y = cyd, num = sub$num),
               aes(X, Y, label = num), color = "white", family = "gobCL",
               fontface = "bold", size = PIN_FONT) +
-    geom_text(data = et, aes(X, Y, label = nom), color = COLOR_COMUNA,
-              family = "gobCL", fontface = "bold", size = LABEL_COMUNA_FONT) +
     coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
     theme_void()
   ragg::agg_png(out, width = Wpx, height = Hpx, units = "px", res = 72*ESC, background = "white")
   print(g); grDevices::dev.off()
-  list(n = nrow(sub), dmin = dmin, desp_max = max(s$desp))
+  list(n = nrow(sub), dmin = dmin, desp_max = max(s$desp), b3 = b3)
 }
 
 # ---- 8. Render del panel norte (pines grandes, anti-colision 2D, sin solape) ----
@@ -305,8 +310,7 @@ render_panel_norte <- function(est, com_sf) {
   b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))               # -> xmin xmax ymin ymax
   b3 <- fit_bbox_3857(b3, MAPA_W / NORTE_H, grow_west = FALSE)
   tl <- get_carto_3857(b3, zoom = 12)
-  et <- ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "norte", ]
-  dibujar_pines(chicas, b3, NORTE_H, tl, com_sf, COMUNAS_CHICAS, et, PNG_NORTE)
+  dibujar_pines(chicas, b3, NORTE_H, tl, com_sf, COMUNAS_CHICAS, PNG_NORTE)
 }
 
 # ---- 9. Render del inset Vina (🔒-2) ----
@@ -318,8 +322,7 @@ render_panel_vina <- function(est, com_sf) {
   b3 <- bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))
   b3 <- fit_bbox_3857(b3, MAPA_W / VINA_H, grow_west = FALSE)
   tl <- get_carto_3857(b3, zoom = 13)
-  et <- ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "vina", ]
-  dibujar_pines(vina, b3, VINA_H, tl, com_sf, COMUNA_INSET, et, PNG_VINA)
+  dibujar_pines(vina, b3, VINA_H, tl, com_sf, COMUNA_INSET, PNG_VINA)
 }
 
 # ---- 10. Chrome HTML (header, indice N->S, leyenda, logo) ----
@@ -377,7 +380,17 @@ construir_leyenda <- function(est) {
   glue('<div style="display:flex;flex-wrap:wrap;gap:6px 16px">{paste(items, collapse="")}</div>')
 }
 
-generar_html <- function(est) {
+# Etiquetas de comuna como texto HTML absoluto sobre el contenedor del mapa (v9).
+# px equivalente al geom_text de antes: size(mm)*.pt -> mismo tamaño visual.
+LABEL_COMUNA_PX <- round(LABEL_COMUNA_FONT * 72.27 / 25.4, 1)   # 6.2mm -> ~17.6px
+etiquetas_html <- function(etq) {
+  if (nrow(etq) == 0) return("")
+  paste(vapply(seq_len(nrow(etq)), function(i) glue(
+    '<div style="position:absolute;left:{round(etq$left[i],2)}%;top:{round(etq$top[i],2)}%;transform:translate(-50%,-50%);z-index:2;font-family:\'gobCL\',sans-serif;font-weight:900;font-size:{LABEL_COMUNA_PX}px;color:{COLOR_COMUNA};white-space:nowrap;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;pointer-events:none">{escapar_html(etq$nom[i])}</div>'),
+    character(1)), collapse = "\n")
+}
+
+generar_html <- function(est, etq_norte, etq_vina) {
   logo_uri <- data_uri(RUTAS$logo, "image/png")
   logo_tag <- if (identical(logo_uri, ""))
     glue('<div style="height:120px;width:190px;display:flex;align-items:center;justify-content:center;border:1px dashed {TOKENS$linea2};color:{TOKENS$muted};font-size:12px">[logo SLEP]</div>')
@@ -417,10 +430,12 @@ body{{margin:0;background:{t$pagina}}}
 <div style="position:relative;width:100%;height:{NORTE_H}px;border:1px solid {t$linea2};border-radius:8px;overflow:hidden">
 <div style="position:absolute;top:8px;left:10px;z-index:2;font-family:\'gobCL\',sans-serif;font-weight:900;font-size:13px;color:{t$ciruela};background:rgba(255,255,255,.82);padding:2px 8px;border-radius:5px">Puchuncaví · Quintero · Concón</div>
 <img src="{norte_uri}" style="display:block;width:100%;height:100%;object-fit:cover"/>
+{etiquetas_html(etq_norte)}
 </div>
 <div style="position:relative;width:100%;height:{VINA_H}px;border:1px solid {t$linea2};border-radius:8px;overflow:hidden">
 <div style="position:absolute;top:8px;left:10px;z-index:2;font-family:\'gobCL\',sans-serif;font-weight:900;font-size:13px;color:{t$ciruela};background:rgba(255,255,255,.82);padding:2px 8px;border-radius:5px">Viña del Mar · ampliación (60)</div>
 <img src="{vina_uri}" style="display:block;width:100%;height:100%;object-fit:cover"/>
+{etiquetas_html(etq_vina)}
 </div>
 </div>
 </div>
@@ -451,7 +466,16 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   log_msg(sprintf("Inset Vina: %d pines (min_dist=%.1f px >= %.0f; desp max=%.0f px).",
                   rv$n, rv$dmin, 2*PIN_RADIO_PX, rv$desp_max), origen = "33_afiche")
 
-  html <- generar_html(est)
+  # Etiquetas de comuna como texto HTML (v9): % sobre cada panel desde su bbox real.
+  etq_norte <- etiquetas_pct(ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "norte", ], rn$b3)
+  etq_vina  <- etiquetas_pct(ETIQUETAS_COMUNA[ETIQUETAS_COMUNA$panel == "vina", ],  rv$b3)
+  log_msg(sprintf("Etiquetas de comuna HTML: %s",
+                  paste(sprintf("%s(%.1f%%,%.1f%%)", c(etq_norte$nom, etq_vina$nom),
+                                c(etq_norte$left, etq_vina$left),
+                                c(etq_norte$top, etq_vina$top)), collapse = " ")),
+          origen = "33_afiche")
+
+  html <- generar_html(est, etq_norte, etq_vina)
   salida <- ruta_salidas("afiche", "mapa_establecimientos.html")
   tmp <- paste0(salida, ".tmp")
   writeLines(html, tmp, useBytes = TRUE)
