@@ -62,6 +62,11 @@ PIN_RADIO_PX <- 22      # radio del pin en px del PNG (diametro 44 px)
 PIN_GAP_PX   <- 4       # separacion minima visible entre bordes de pines
 PIN_FONT     <- 4.3     # tamaño unico del numero (geom_text, mm)
 
+# Indice (v6): fuente ligeramente mayor (antes 10/12.5 px) para llenar el alto.
+# Tope por no-overflow: los 97 (Viña en 2 col) deben caber; space-between reparte slack.
+INDICE_FONT     <- 10.3  # px: numero, nombre y RBD del indice (max sin overflow)
+INDICE_FONT_HDR <- 13    # px: encabezado de comuna
+
 # Zonas de exclusion: rectangulos (px del PNG, origen arriba-izquierda) que cubren
 # los rotulos de ciudad HORNEADOS en el tile CARTO (no se pueden mover desde el
 # codigo). Calibrados inspeccionando el render. La anti-colision las trata como
@@ -91,25 +96,38 @@ registrar_fuentes <- function() {
 
 # ---- 6. Utilidades de datos ----
 
-# Numeracion oficial N->S (Fase 1): comuna (N->S) -> tipo -> nombre. Verificable.
+# Referencia (encargo v6): Puchuncaví 1-20 por latitud N->S estricta. Verifica el
+# criterio de orden contra el dato real.
+PUCHUNCAVI_REF <- c(
+  "Escuela Básica La Laguna", "Jardín Infantil Mi Mundo Feliz", "Colegio Maitencillo",
+  "Escuela Básica La Quebrada", "Escuela Básica El Rungue", "Jardín Infantil Los Conejitos",
+  "Escuela Horcón", "Jardín Infantil Sirenita", "Escuela Básica El Rincón",
+  "Jardín Infantil Semillita de Puchuncaví", "Colegio General José Velásquez Bórquez",
+  "Escuela La Chocota", "Escuela Multidéficit Amanecer", "Jardín Infantil Renacer",
+  "Escuela Campiche", "Colegio La Greda", "Complejo Educacional Sargento Aldea",
+  "Jardín Infantil Caballito de Mar", "Escuela Pucalán", "Escuela Los Maquis")
+
+# Numeracion N->S ESTRICTA por latitud (Fase 1 v6): mas al norte = 1, mas al sur =
+# 97. El tipo NO influye en el orden (solo en el color). Empates de latitud
+# (improbables) se desempatan por longitud y luego nombre. Verificable.
 numerar <- function(est) {
   est <- est |>
-    mutate(
-      comuna_chr = as.character(comuna),
-      comuna_f   = factor(comuna_chr, levels = COMUNAS_ORDEN),
-      tipo_f     = factor(tipo, levels = TIPO_ORDEN)
-    ) |>
-    arrange(comuna_f, tipo_f, nombre) |>
+    mutate(comuna_chr = as.character(comuna)) |>
+    arrange(desc(latitud), desc(longitud), nombre) |>
     mutate(num = row_number(),
            color = unname(COLOR_TIPO[tipo]))
-  # 🔒-5: rangos por comuna exactos y sin huecos/duplicados.
+  # numeracion sin huecos/duplicados y estrictamente decreciente en latitud.
   stopifnot(identical(sort(est$num), seq_len(nrow(est))))
+  stopifnot(all(diff(est$latitud) <= 0))
+  # rangos por comuna se mantienen (las comunas no se solapan en latitud).
   rng <- est |> summarise(lo = min(num), hi = max(num), .by = comuna_chr)
   esperado <- data.frame(
     comuna_chr = COMUNAS_ORDEN,
     lo = c(1, 21, 31, 38), hi = c(20, 30, 37, 97))
   chk <- merge(rng, esperado, by = "comuna_chr", suffixes = c("", "_e"))
   stopifnot(all(chk$lo == chk$lo_e), all(chk$hi == chk$hi_e))
+  # el orden N->S reproduce la referencia de Puchuncaví del encargo.
+  stopifnot(identical(est$nombre[est$comuna_chr == "Puchuncaví"], PUCHUNCAVI_REF))
   est
 }
 
@@ -306,9 +324,9 @@ bloque_fontface <- function() {
 # Una fila del indice: dot de color por tipo + numero + nombre + RBD (sin truncar).
 fila_indice <- function(num, nombre, rbd, color) {
   glue('<div style="display:flex;align-items:baseline;gap:6px;padding:1px 0;break-inside:avoid">
-<span style="width:7px;height:7px;border-radius:50%;background:{color};flex:none;transform:translateY(1px)"></span>
-<span style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:10px;color:{TOKENS$tinta_fuerte};min-width:15px;text-align:right">{num}</span>
-<span style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10px;line-height:1.2;color:{TOKENS$tinta_media1}">{escapar_html(nombre)} <span style="color:{TOKENS$muted}">(RBD {rbd})</span></span>
+<span style="width:8px;height:8px;border-radius:50%;background:{color};flex:none;transform:translateY(1px)"></span>
+<span style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:{INDICE_FONT}px;color:{TOKENS$tinta_fuerte};min-width:17px;text-align:right">{num}</span>
+<span style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:{INDICE_FONT}px;line-height:1.2;color:{TOKENS$tinta_media1}">{escapar_html(nombre)} <span style="color:{TOKENS$muted}">(RBD {rbd})</span></span>
 </div>')
 }
 seccion_indice <- function(est, comuna_nom, columnas = 1) {
@@ -318,8 +336,8 @@ seccion_indice <- function(est, comuna_nom, columnas = 1) {
     fila_indice(sub$num[i], sub$nombre[i], sub$rbd[i], sub$color[i]), character(1))
   cols_css <- if (columnas > 1)
     glue("column-count:{columnas};column-gap:14px;") else ""
-  glue('<div style="margin-bottom:9px">
-<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:12.5px;color:{TOKENS$ciruela};border-bottom:1px solid {TOKENS$linea2};padding-bottom:2px;margin-bottom:4px">{comuna_nom} <span style="color:{TOKENS$muted};font-weight:400">({nrow(sub)})</span></div>
+  glue('<div>
+<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:{INDICE_FONT_HDR}px;color:{TOKENS$ciruela};border-bottom:1px solid {TOKENS$linea2};padding-bottom:3px;margin-bottom:5px">{comuna_nom} <span style="color:{TOKENS$muted};font-weight:400">({nrow(sub)})</span></div>
 <div style="{cols_css}">{paste(filas, collapse="")}</div>
 </div>')
 }
@@ -370,12 +388,12 @@ body{{margin:0;background:{t$pagina}}}
 </div>
 
 <div style="flex:1;display:flex;min-height:0">
-<aside style="width:{LIENZO$lista_w}px;flex:none;border-right:1px solid {t$linea1};padding:18px 22px;display:flex;flex-direction:column;overflow:hidden">
-<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:16px;color:{t$tinta_fuerte};margin-bottom:3px">Índice de establecimientos</div>
-<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10.5px;line-height:1.4;color:{t$bajada};margin-bottom:9px">Numeración norte→sur. Cada número del mapa corresponde a un establecimiento; el índice es de respaldo.</div>
+<aside style="width:{LIENZO$lista_w}px;flex:none;border-right:1px solid {t$linea1};padding:14px 22px;display:flex;flex-direction:column;overflow:hidden">
+<div style="font-family:\'gobCL\',sans-serif;font-weight:900;font-size:16px;color:{t$tinta_fuerte};margin-bottom:2px">Índice de establecimientos</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:10.5px;line-height:1.35;color:{t$bajada};margin-bottom:7px">Numeración geográfica norte→sur; el número del mapa es el del índice.</div>
 <div style="margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid {t$linea2}">{construir_leyenda(est)}</div>
-<div style="flex:1;overflow:hidden">{construir_indice(est)}</div>
-<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:8.5px;color:{t$muted};margin-top:8px;padding-top:6px;border-top:1px solid {t$linea3}">Fondo cartográfico © OpenStreetMap · © CARTO (Positron). Límites comunales: Biblioteca del Congreso Nacional de Chile (BCN). Establecimientos: maestro SLEP Costa Central.</div>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden">{construir_indice(est)}</div>
+<div style="font-family:\'Museo Sans\',sans-serif;font-weight:300;font-size:9px;line-height:1.4;color:{t$muted};margin-top:10px;padding-top:7px;border-top:1px solid {t$linea3}">Desarrollado por el Área de Monitoreo a partir de datos de OpenStreetMap, CARTO (Positron), los límites comunales publicados por la Biblioteca del Congreso Nacional de Chile (BCN) y el maestro de establecimientos del SLEP Costa Central, de elaboración propia.</div>
 </aside>
 
 <div style="flex:1;min-width:0;padding:{PAD_MAPA}px;display:flex;flex-direction:column;gap:{GAP_PANEL}px">
