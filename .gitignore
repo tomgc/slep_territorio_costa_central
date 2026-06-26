@@ -1,7 +1,32 @@
-# Sistema
+# =============================================================================
+# .gitignore — slep_georreferenciacion (Rama A: datos publicos MINEDUC)
+# Los .xlsx/.rds de datos, las fuentes .otf y los entregables binarios
+# (.afpub/.pdf/.png) SI se versionan por decision del titular (sesion 4).
+# Se excluyen: andamiaje de migracion de un solo uso, scratchpad, sistema y
+# credenciales.
+# =============================================================================
+
+# Andamiaje desechable y exploracion (gitignored por decision de sesion 3)
+scratchpad_afiche/
+
+# Andamio de migracion de un solo uso (gitignored por decision de sesion 4)
+/diagnostico_migracion_github.R
+/diagnostico_*.R
+/diagnostico_*.md
+
+# Credenciales (defensa en profundidad; no deberia haber ninguna)
+.env
+.Renviron
+*credentials*
+*secret*
+*token*
+*password*
+
+# Sistema R / editores
 .Rproj.user/
 .Rhistory
 .RData
+.Ruserdata
 .vscode/
 .idea/
 .DS_Store
@@ -12,26 +37,10 @@ Thumbs.db
 _archivo/
 *.bak
 
-# Outputs accidentales en raiz y scripts de diagnostico
-/*.docx
-/*.pdf
-/*.html
-/diagnostico_*.md
+# Outputs accidentales de scripts sueltos de verificacion
 /verificar_*.R
 /listar_*.R
 
-# Outputs temporales
+# Temporales Quarto
 *_freeze/
 .quarto/
-
-# Artefactos intermedios del pipeline (se regeneran; el HTML/PDF final si se versiona)
-40_salidas/*.rds
-# PNG de paneles del afiche: se regeneran y van incrustados (base64) en el HTML final
-40_salidas/afiche/panel_*.png
-40_salidas/afiche/cache_mapa_base.rds
-# Scratch de desarrollo del afiche
-scratchpad_afiche/
-# Shapefile BCN crudo (61 MB): se recorta a comunas.geojson liviano y se versiona ese
-20_insumos/comunas_bcn/
-# PDF A0 del afiche: entregable binario (~3 MB), se regenera; no se versiona
-40_salidas/afiche/*.pdf
