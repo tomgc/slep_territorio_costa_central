@@ -1,9 +1,9 @@
 # =============================================================================
 # .gitignore — slep_georreferenciacion (Rama A: datos publicos MINEDUC)
-# Los .xlsx/.rds de datos, las fuentes .otf y los entregables binarios
-# (.afpub/.pdf/.png) SI se versionan por decision del titular (sesion 4).
-# Se excluyen: andamiaje de migracion de un solo uso, scratchpad, sistema y
-# credenciales.
+# Los .xlsx/.rds de datos, las fuentes .otf y el comunas.geojson SI se versionan.
+# Sesion 6: los binarios PESADOS regenerables (.afpub/.pdf/.png/.html de salida y el
+# shapefile crudo BCN) DEJAN de versionarse; se reproducen desde los scripts.
+# Se excluyen ademas: andamiaje de un solo uso, scratchpad, sistema y credenciales.
 # =============================================================================
 
 # Andamiaje desechable y exploracion (gitignored por decision de sesion 3)
@@ -44,3 +44,20 @@ _archivo/
 # Temporales Quarto
 *_freeze/
 .quarto/
+
+# =============================================================================
+# Binarios pesados regenerables (sesion 6): el repo guarda CODIGO y DOCUMENTACION;
+# las imagenes/PDF se reproducen desde los scripts. Los bytes quedan en disco,
+# fuera de git. El insumo liviano y valioso comunas.geojson SI se versiona.
+# =============================================================================
+# Productos del afiche (regenerables por 30_procesamiento/33_generar_afiche.R)
+40_salidas/afiche/*.pdf
+40_salidas/afiche/*.afpub
+40_salidas/afiche/*.html
+40_salidas/afiche/*.png
+# Renders de exploraciones (regenerables por sus scripts .R; SOLO se versiona el .R)
+40_salidas/exploraciones/**/*.png
+40_salidas/exploraciones/**/*.pdf
+40_salidas/exploraciones/**/*.afpub
+# Shapefile crudo BCN (fuente externa pesada; el insumo versionado es comunas.geojson)
+/20_insumos/comunas_bcn/
