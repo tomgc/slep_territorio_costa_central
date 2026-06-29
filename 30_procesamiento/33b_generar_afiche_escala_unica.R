@@ -36,6 +36,25 @@ FRAC_RADIO  <- 0.60                       # pin GLOBAL a 60% del PIN_RADIO_PX de
 RATIO_GLIFO <- 0.72                       # "97" ~72% del diametro (max legible)
 UNICO_H     <- e$ALTO_BODY                # panel unico ocupa todo el body (= NORTE+GAP+VINA)
 ZOOM_TILE   <- 12L                        # zoom de tiles para el panel unico
+# REUSAR_PNG=TRUE (via env) reutiliza panel_escala_unica.png existente y NO lo regenera:
+# recalcula solo la geometria (b3 para las etiquetas) y reescribe HTML+PDF. Util cuando
+# cambian las etiquetas/chrome pero los pines no se mueven. Default FALSE (render completo).
+REUSAR_PNG  <- isTRUE(as.logical(Sys.getenv("REUSAR_PNG", "FALSE")))
+
+# Offset por comuna (en puntos porcentuales) sobre la posicion que devuelve
+# e$etiquetas_pct (ancla = centroide geografico). Capa ADITIVA propia de 33b: NO toca
+# e$etiquetas_pct ni 33. Solo mueve la tarjeta HTML; el PNG de pines no cambia.
+# Calibrado contra el render real (cajas de texto vs los 97 circulos de pin):
+#  - Viña: su centroide cae sobre el cluster denso (tapaba el pin 56); se baja bajo el
+#    cluster, lo mas al SW que permite el ancho del rotulo (clearance +18.6 px al pin 96).
+#  - Puchuncaví/Quintero/Concón: ya despejadas (cl 26/58/13 px). NO se mueven: el
+#    desplazamiento NW de Puchuncaví hacia la costa choca con sus propios pines (pin 7).
+OFFSET_ETIQUETAS_PCT <- list(
+  "Puchuncaví"   = c(dx =  0.0, dy =  0.0),
+  "Quintero"     = c(dx =  0.0, dy =  0.0),
+  "Concón"       = c(dx =  0.0, dy =  0.0),
+  "Viña del Mar" = c(dx = -1.5, dy =  9.0)
+)
 
 # Tamaño de fuente del numero al MAXIMO que cabe (misma metrica de glifo que el sondeo
 # 03_escala_unica_tamano_pin/scripts/preview_tamano_pin.R): mide el ancho real de "97"
@@ -61,32 +80,37 @@ render_panel_unico <- function(est, com_sf, out) {
   b4 <- c(bb[1]-0.020, bb[2]-0.015, bb[3]+0.020, bb[4]+0.015)    # mismo pad que render_panel_*
   b3 <- e$bbox_a_3857(c(b4[1], b4[3], b4[2], b4[4]))
   b3 <- e$fit_bbox_3857(b3, e$MAPA_W / UNICO_H, grow_west = FALSE)
-  tl <- e$get_carto_3857(b3, zoom = ZOOM_TILE)
   Xr <- b3[2]-b3[1]; Yr <- b3[4]-b3[3]
   xy <- sf::st_coordinates(sf::st_transform(pc, 3857)); est$X <- xy[,1]; est$Y <- xy[,2]
   px <- (est$X - b3[1])/Xr*Wpx; py <- (b3[4] - est$Y)/Yr*Hpx
   s <- e$separar_pines(px, py, RADIO, GAP, Wpx, Hpx)             # anti-colision 2D sobre los 97
   dmin  <- e$mindist(s$px, s$py)
   fuera <- sum(s$px < RADIO | s$px > Wpx-RADIO | s$py < RADIO | s$py > Hpx-RADIO)
-  cxd <- b3[1] + s$px/Wpx*Xr; cyd <- b3[4] - s$py/Hpx*Yr
-  rdat <- RADIO * Xr/Wpx
   font_size <- fit_font_size(RATIO_GLIFO, 2*RADIO, e$ESC)
-  poly <- e$circulos(cxd, cyd, rdat, est$color, est$num)
-  bord <- e$comuna_paths(com_sf, COMUNAS_ORDEN)
-  g <- ggplot() +
-    annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
-    geom_path(data = bord, aes(X, Y, group = grp),
-              color = e$COL_BORDE_COMUNA, linewidth = 0.5, alpha = 0.85) +
-    geom_polygon(data = poly, aes(X, Y, group = grp, fill = fill),
-                 color = "white", linewidth = 0.5) +
-    scale_fill_identity() +
-    geom_text(data = data.frame(X = cxd, Y = cyd, num = est$num),
-              aes(X, Y, label = num), color = "white", family = "gobCL",
-              fontface = "bold", size = font_size) +
-    coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
-    theme_void()
-  ragg::agg_png(out, width = Wpx, height = Hpx, units = "px", res = 72*e$ESC, background = "white")
-  print(g); grDevices::dev.off()
+  if (REUSAR_PNG && file.exists(out)) {
+    log_msg(sprintf("[escala unica] REUSAR_PNG: se reutiliza %s (no se regenera el mapa).", out),
+            origen = "33b_escala_unica")
+  } else {
+    tl <- e$get_carto_3857(b3, zoom = ZOOM_TILE)
+    cxd <- b3[1] + s$px/Wpx*Xr; cyd <- b3[4] - s$py/Hpx*Yr
+    rdat <- RADIO * Xr/Wpx
+    poly <- e$circulos(cxd, cyd, rdat, est$color, est$num)
+    bord <- e$comuna_paths(com_sf, COMUNAS_ORDEN)
+    g <- ggplot() +
+      annotation_raster(tl$img, tl$e[1], tl$e[2], tl$e[3], tl$e[4]) +
+      geom_path(data = bord, aes(X, Y, group = grp),
+                color = e$COL_BORDE_COMUNA, linewidth = 0.5, alpha = 0.85) +
+      geom_polygon(data = poly, aes(X, Y, group = grp, fill = fill),
+                   color = "white", linewidth = 0.5) +
+      scale_fill_identity() +
+      geom_text(data = data.frame(X = cxd, Y = cyd, num = est$num),
+                aes(X, Y, label = num), color = "white", family = "gobCL",
+                fontface = "bold", size = font_size) +
+      coord_equal(xlim = c(b3[1], b3[2]), ylim = c(b3[3], b3[4]), expand = FALSE) +
+      theme_void()
+    ragg::agg_png(out, width = Wpx, height = Hpx, units = "px", res = 72*e$ESC, background = "white")
+    print(g); grDevices::dev.off()
+  }
   list(n = nrow(est), dmin = dmin, fuera = fuera, desp_max = max(s$desp),
        b3 = b3, font_size = font_size, radio = RADIO, Wpx = Wpx, Hpx = Hpx)
 }
@@ -162,9 +186,19 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
                   ru$n, ru$radio, ru$dmin, 2*ru$radio, ru$fuera, ru$desp_max, ru$font_size),
           origen = "33b_escala_unica")
 
-  # Las 4 etiquetas de comuna recalculadas para el bbox del panel unico (no copiadas).
+  # Las 4 etiquetas de comuna recalculadas para el bbox del panel unico (no copiadas),
+  # mas el offset aditivo calibrado para sacarlas de encima de los pines.
   etq <- e$etiquetas_pct(e$ETIQUETAS_COMUNA, ru$b3)
-  log_msg(sprintf("[escala unica] Etiquetas comuna (%%): %s",
+  for (k in seq_len(nrow(etq))) {
+    of <- OFFSET_ETIQUETAS_PCT[[etq$nom[k]]]
+    if (!is.null(of)) {
+      etq$left[k] <- etq$left[k] + unname(of["dx"])
+      etq$top[k]  <- etq$top[k]  + unname(of["dy"])
+    }
+  }
+  etq$left <- pmin(pmax(etq$left, 2), 95)        # clamp al marco
+  etq$top  <- pmin(pmax(etq$top,  2), 95)
+  log_msg(sprintf("[escala unica] Etiquetas comuna (%%, con offset): %s",
                   paste(sprintf("%s(%.1f,%.1f)", etq$nom, etq$left, etq$top), collapse=" ")),
           origen = "33b_escala_unica")
 
