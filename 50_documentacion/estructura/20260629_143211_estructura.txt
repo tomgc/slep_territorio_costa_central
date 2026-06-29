@@ -1,5 +1,5 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-06-29 14:33:33
+Fecha: 2026-06-29 14:32:11
 Total entradas: 169 (28 carpetas, 141 archivos)
 
 ## Arbol
@@ -142,12 +142,12 @@ Total entradas: 169 (28 carpetas, 141 archivos)
     50_documentacion/andamios/logs/20260628_reorganizacion_scratchpad_faseA_log.md  (  6.73K)
     50_documentacion/andamios/reporte_fase0_escala_unica.md  ( 12.03K)
 [D] 50_documentacion/estructura  (-)
+    50_documentacion/estructura/20260628_104224_estructura.md  ( 10.95K)
+    50_documentacion/estructura/20260628_104224_estructura.txt  ( 10.94K)
     50_documentacion/estructura/20260628_105815_estructura.md  ( 10.99K)
     50_documentacion/estructura/20260628_105815_estructura.txt  ( 10.98K)
-    50_documentacion/estructura/20260629_143211_estructura.md  ( 11.43K)
-    50_documentacion/estructura/20260629_143211_estructura.txt  ( 11.42K)
-    50_documentacion/estructura/estructura_actual.md  ( 11.43K)
-    50_documentacion/estructura/estructura_actual.txt  ( 11.42K)
+    50_documentacion/estructura/estructura_actual.md  ( 10.99K)
+    50_documentacion/estructura/estructura_actual.txt  ( 10.98K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)

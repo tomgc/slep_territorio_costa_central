@@ -1,10 +1,9 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-06-28 10:42:24
-Total entradas: 162 (28 carpetas, 134 archivos)
+Fecha: 2026-06-29 14:33:33
+Total entradas: 169 (28 carpetas, 141 archivos)
 
 ## Arbol
 
-```
     00_escanear_proyecto.R  (  3.2K)
     00_run_all.R  (  3.08K)
 [D] 10_utils  (-)
@@ -27,13 +26,18 @@ Total entradas: 162 (28 carpetas, 134 archivos)
     30_procesamiento/31_leer_validar.R  (  3.93K)
     30_procesamiento/32_proyectar_lienzo.R  (  2.37K)
     30_procesamiento/33_generar_afiche.R  ( 27.41K)
+    30_procesamiento/33b_generar_afiche_escala_unica.R  ( 14.23K)
 [D] 40_salidas  (-)
 [D] 40_salidas/afiche  (-)
     40_salidas/afiche/afiche_boceto_final.png  (405.81K)
+    40_salidas/afiche/mapa_establecimientos_escala_unica.afpub  (  5.95M)
+    40_salidas/afiche/mapa_establecimientos_escala_unica.html  (  4.12M)
+    40_salidas/afiche/mapa_establecimientos_escala_unica.pdf  ( 13.02M)
     40_salidas/afiche/mapa_establecimientos_slep_cc.afpub  (  6.43M)
     40_salidas/afiche/mapa_establecimientos_slep_cc.pdf  ( 36.98M)
     40_salidas/afiche/mapa_establecimientos.html  (  4.57M)
     40_salidas/afiche/mapa_establecimientos.pdf  (  2.71M)
+    40_salidas/afiche/panel_escala_unica.png  (  2.72M)
     40_salidas/afiche/panel_norte.png  (  1.39M)
     40_salidas/afiche/panel_vina.png  (  1.68M)
     40_salidas/establecimientos_proyectados.rds  (  5.47K)
@@ -131,23 +135,25 @@ Total entradas: 162 (28 carpetas, 134 archivos)
     50_documentacion/andamios/logs/20260626_preview_D_vs_E_log.md  (  3.73K)
     50_documentacion/andamios/logs/20260626_preview_tamano_pin_log.md  (  3.62K)
     50_documentacion/andamios/logs/20260626_tile_etiquetas_comuna_log.md  (  6.71K)
+    50_documentacion/andamios/logs/20260628_fase1_escala_unica_33b_log.md  (  4.48K)
+    50_documentacion/andamios/logs/20260628_fix_etiquetas_33b_log.md  (  3.37K)
     50_documentacion/andamios/logs/20260628_purga_historial_op3_log.md  (  3.21K)
     50_documentacion/andamios/logs/20260628_reorg_gitignore_op1_log.md  (  3.95K)
     50_documentacion/andamios/logs/20260628_reorganizacion_scratchpad_faseA_log.md  (  6.73K)
     50_documentacion/andamios/reporte_fase0_escala_unica.md  ( 12.03K)
 [D] 50_documentacion/estructura  (-)
-    50_documentacion/estructura/20260626_112940_estructura.md  (  8.87K)
-    50_documentacion/estructura/20260626_112940_estructura.txt  (  8.86K)
-    50_documentacion/estructura/20260626_161016_estructura.md  (  9.01K)
-    50_documentacion/estructura/20260626_161016_estructura.txt  (  9.01K)
-    50_documentacion/estructura/20260628_090152_estructura.md  ( 10.09K)
-    50_documentacion/estructura/20260628_090152_estructura.txt  ( 10.09K)
-    50_documentacion/estructura/estructura_actual.md  (  9.01K)
-    50_documentacion/estructura/estructura_actual.txt  (  9.01K)
+    50_documentacion/estructura/20260628_105815_estructura.md  ( 10.99K)
+    50_documentacion/estructura/20260628_105815_estructura.txt  ( 10.98K)
+    50_documentacion/estructura/20260629_143211_estructura.md  ( 11.43K)
+    50_documentacion/estructura/20260629_143211_estructura.txt  ( 11.42K)
+    50_documentacion/estructura/estructura_actual.md  ( 11.43K)
+    50_documentacion/estructura/estructura_actual.txt  ( 11.42K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)
     50_documentacion/traspasos/traspaso_cierre_v03.md  ( 10.9K)
+    50_documentacion/traspasos/traspaso_cierre_v04.md  ( 16.27K)
+    50_documentacion/traspasos/traspaso_cierre_v05.md  ( 19.76K)
     CLAUDE.md  (  3.01K)
 [D] design_handoff_mapa_establecimientos  (-)
 [D] design_handoff_mapa_establecimientos/assets  (-)
@@ -167,19 +173,18 @@ Total entradas: 162 (28 carpetas, 134 archivos)
     slep_georreferenciacion.Rproj  (190)
 [D] tests  (-)
 [D] tests/testthat  (-)
-```
 
 ## Conteo por extension
 
-- .md: 36
-- .R: 35
-- .png: 33
+- .md: 39
+- .R: 36
+- .png: 34
 - .otf: 7
-- .txt: 4
-- .html: 3
-- .pdf: 2
+- .html: 4
+- .pdf: 3
+- .txt: 3
+- .afpub: 2
 - .rds: 2
-- .afpub: 1
 - .CPG: 1
 - .dbf: 1
 - .geojson: 1
