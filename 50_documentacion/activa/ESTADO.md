@@ -2,7 +2,7 @@
 slug: slep_georreferenciacion
 nombre_real: Georreferenciación de establecimientos del territorio — afiche cartográfico A0 (SLEP Costa Central)
 categoria: activo
-semaforo: activo
+semaforo: pausa
 sesion_actual: v05
 ultima_actividad: 2026-06-28
 maneja_sensibles: false
