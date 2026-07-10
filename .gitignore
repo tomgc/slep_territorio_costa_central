@@ -61,3 +61,15 @@ _archivo/
 40_salidas/exploraciones/**/*.afpub
 # Shapefile crudo BCN (fuente externa pesada; el insumo versionado es comunas.geojson)
 /20_insumos/comunas_bcn/
+
+# =============================================================================
+# Crudos del mapa interactivo (sesion 7, gobernanza POLITICA §6): el historico
+# por estudiante contiene MRUN (dato individual) y NUNCA entra al repo; los CSV/PDF
+# de auxiliares son crudos pesados regenerables desde la fuente MINEDUC.
+# Los xlsx de auxiliares (codigo_tipo_y_macrogrupo, diccionario_territorios,
+# listado_slep_2026) SI se versionan: no traen dato individual y son diccionarios
+# canonicos del pipeline. No se necesita glob *.xlsx (solo se ignoran csv/pdf).
+# =============================================================================
+20_insumos/historico_matricula/
+20_insumos/auxiliares/*.csv
+20_insumos/auxiliares/*.pdf
