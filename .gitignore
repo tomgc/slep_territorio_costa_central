@@ -73,3 +73,5 @@ _archivo/
 20_insumos/historico_matricula/
 20_insumos/auxiliares/*.csv
 20_insumos/auxiliares/*.pdf
+# Insumo del flujo SIMCE (otro flujo de la cartera; no es insumo del mapa interactivo)
+20_insumos/auxiliares/glosas_simce_consolidado_simce.xlsx
