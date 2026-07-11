@@ -92,3 +92,31 @@ timestamps de ejecución en las salidas — `fecha_corte` es constante).
 
 **Veredicto: AUDITORÍA APROBADA sin hallazgos pendientes.** Los artefactos de datos están
 listos para commit tras revisión del titular (36 + JSONs + esta auditoría).
+
+---
+
+## ADDENDUM (2026-07-11) — Hallazgo post-auditoría: huecos de serie como `{}` en vez de `null`
+
+**Qué pasó.** El campo `s` (serie anual) publicaba los años sin registro como `{}` (objeto
+vacío) y no como `null`, violando el propio glosario de metadatos ("null = sin registro").
+Causa: en `presentar()` de 36 los huecos se construían como `NULL` de R, y `jsonlite`
+serializa `NULL` dentro de una lista como `{}` (el `na = "null"` solo aplica a `NA`).
+Detectado en el hito 2 del mapa web: el popup de RBD 14439 decía "operó hasta 2025" cuando
+su serie termina en 2022 (en JS `{} !== null`, el hueco pasaba por dato).
+
+**Por qué esta auditoría no lo vio.** El recuento independiente se hizo en R: `read_json`
+convierte `{}` en lista vacía y el código de comparación trataba lista-vacía y null como
+equivalentes ("sin dato"), así que los VALORES cuadraban a tolerancia 0 mientras el
+ENCODING estaba mal. El consumidor real (JavaScript) distingue lo que R normaliza.
+
+**Corrección (autorizada por el titular, alcance estricto).** Huecos como `NA_integer_` en
+`presentar()` → `null` literal. Verificado tras regenerar: indicadores/dep/slep campo a
+campo vs el GeoJSON commiteado = 0 diferencias; valores de serie idénticos; `{}` en campo
+`s` = 0; huecos totales 741 (geojson) + 170 (sin_geo) = **911** = 1268×10 − 11.769 filas de
+serie del RDS de 35 (fuente de verdad) ✓; idempotente (hash `f7998edc…` ×2). JS del mapa
+además endurecido: hueco = todo valor no numérico (`esNum`), no solo `null`.
+
+**Regla aprendida.** Los artefactos que cruzan la frontera R→JS deben auditarse DESDE EL
+CONSUMIDOR (parsear con el mismo runtime que los consumirá, o al menos con grep sobre el
+texto crudo), no solo desde el productor: el parser del productor puede normalizar
+silenciosamente exactamente el defecto que el consumidor va a sufrir.

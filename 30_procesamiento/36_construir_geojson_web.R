@@ -193,7 +193,10 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
       mx   = if (is.na(fila$max_10))  ETIQUETA_SIN_DATO else fila$max_10,
       pr   = if (is.na(fila$prom_10)) ETIQUETA_SIN_DATO else round(fila$prom_10),  # redondeo SOLO aqui
       mn   = if (is.na(fila$min_10))  ETIQUETA_SIN_DATO else fila$min_10,
-      s    = lapply(cols_anio, function(a) { v <- fila[[a]]; if (is.na(v)) NULL else v })
+      # huecos como NA (na="null" los escribe como null LITERAL en el JSON).
+      # NUNCA como NULL de R: jsonlite serializa NULL dentro de lista como {} y
+      # el consumidor JS trataria el hueco como dato (bug corregido 2026-07-11).
+      s    = lapply(cols_anio, function(a) { v <- fila[[a]]; if (is.na(v)) NA_integer_ else v })
     )
   }
 
