@@ -5,8 +5,10 @@
 #             oficial: filtra region 5 + funcionando, EXCLUYE el territorio
 #             insular oceanico (comunas 5201 Isla de Pascua y 5104 Juan
 #             Fernandez; alcance v1), decodifica (provincia, dependencia,
-#             macrogrupos segun planilla canonica), valida geo continental y
-#             reporta los sin geo (se excluyen del mapa, NO se inventan).
+#             macrogrupos segun planilla canonica), RECODIFICA la dependencia a
+#             la situacion SLEP vigente 2026 (ver bloque de constantes), valida
+#             geo continental y reporta los sin geo (se excluyen del mapa, NO
+#             se inventan).
 #             Los NIVELES por EE no salen de aqui: se derivan en 35 de los pares
 #             (COD_ENSE, COD_GRADO) observados en el historico (diagnostico §7.6).
 # Insumos   : 20_insumos/auxiliares/directorio_oficial_ee_publico.csv (UTF-8, ;)
@@ -31,6 +33,7 @@ suppressMessages({ library(data.table); library(dplyr) })
 # ---- 4. Rutas centralizadas ----
 RUTA_DIRECTORIO  <- ruta_insumos("auxiliares", "directorio_oficial_ee_publico.csv")
 RUTA_MACROGRUPOS <- ruta_insumos("auxiliares", "codigo_tipo_y_macrogrupo.xlsx")
+RUTA_LISTADO_SLEP <- ruta_insumos("auxiliares", "listado_slep_2026.xlsx")
 DIR_SALIDA_MAPA  <- ruta_salidas("mapa_interactivo")
 RUTA_SALIDA      <- file.path(DIR_SALIDA_MAPA, "directorio_region5.rds")
 
@@ -60,6 +63,47 @@ PROVINCIAS_R5 <- c(
 DEPENDENCIAS <- c(
   "1" = "Municipal", "2" = "Particular Subvencionado", "3" = "Particular Pagado",
   "4" = "Corp. de Administración Delegada", "5" = "Servicio Local de Educación")
+
+# =============================================================================
+# RECODIFICACION SLEP VIGENTE 2026 (decision del titular, 2026-07-11).
+# QUE HACE: la dependencia mostrada refleja la situacion institucional VIGENTE
+# a 2026, no el corte del directorio (30-abr-2025). Las comunas con
+# AGNO_TRASPASO_EDUC <= 2026 en listado_slep_2026.xlsx (region 5) se muestran
+# como "Servicio Local de Educacion" con el nombre del SLEP
+# (NOMBRE_SLEP_FORMATO), aunque el directorio las traiga como municipales.
+# POR QUE: el directorio 2025 antecede a los traspasos del 1-ene-2026
+# (Aconcagua, Los Andes, Marga Marga, Petorca); mostrar el dato literal
+# pintaria como municipales 216 EE que hoy administran los SLEP. Esta es una
+# RECODIFICACION DELIBERADA que se aparta del dato oficial, declarada en
+# metadatos.json; no un parche silencioso.
+# EXCEPCIONES (hoja "Consideraciones" del listado): Zapallar (Petorca, 2027) y
+# Santo Domingo (del Litoral, 2028) postergadas; del Litoral (2027) y Quillota
+# (2029) aun no traspasan -> todos siguen municipales.
+# Costa Central (73) y Valparaiso (54) ya vienen como COD_DEPE2=5 del
+# directorio: la regla no los altera, solo les asigna el nombre del SLEP.
+# =============================================================================
+TRASPASO_SLEP_VIGENTE_2026 <- TRUE
+ANIO_VIGENCIA_TRASPASO     <- 2026L
+# Gate COMPUESTO (no un total unico: un agregado puede pasar con componentes
+# malos que se compensan). Desagregados verificados con stopifnot en el flujo.
+# NOTA: el 55.o EE de SLEP Valparaiso es RBD 2009 (Colegio Insular Robinson
+# Crusoe, Juan Fernandez, traspasado 2021): queda FUERA por la exclusion de
+# territorio insular v1 (decision de sesion; ver COMUNAS_INSULARES_EXCLUIDAS_V1).
+N_SLEP_DEP5_DIRECTORIO <- 127L   # ya SLEP en el dato: Valparaiso 54 + Costa Central 73
+N_SLEP_RECODIFICADOS   <- 216L   # municipales que pasan a SLEP por traspaso <= 2026
+N_SLEP_TOTAL_ESPERADO  <- 343L   # 127 + 216
+# Desagregados esperados (verificados por partes):
+SLEP_DEP5_POR_COMUNA <- c("5101" = 54L,                      # Valparaiso
+                          "5109" = 49L, "5105" = 14L,        # Costa Central:
+                          "5107" =  6L, "5103" =  4L)        #  Vina/Puch/Quint/Concon
+SLEP_RECOD_POR_SLEP  <- c("Aconcagua" = 67L, "Marga Marga" = 58L,
+                          "Petorca" = 55L, "Los Andes" = 36L)
+MUNICIPALES_NO_TRASPASADOS <- c(zapallar = 4L, santo_domingo = 6L,
+                                del_litoral = 48L, quillota = 47L)
+COMUNA_ZAPALLAR      <- "5405"
+COMUNA_SANTO_DOMINGO <- "5606"
+COMUNAS_DEL_LITORAL  <- c("5601", "5602", "5603", "5102", "5604", "5605")  # sin Sto Domingo
+COMUNAS_QUILLOTA     <- c("5501", "5502", "5503", "5504", "5506")
 
 # Caja de validacion geografica continental (unica vigente para geo_valida).
 # El territorio insular ya salio del universo por COMUNA (criterio de arriba);
@@ -94,6 +138,17 @@ en_caja <- function(lat, lon, caja) {
   !is.na(lat) & !is.na(lon) &
     lat >= caja$lat[1] & lat <= caja$lat[2] &
     lon >= caja$lon[1] & lon <= caja$lon[2]
+}
+
+# Lee el listado oficial de SLEP (region 5): comuna -> SLEP y anio de traspaso.
+# Llaves character. NOMBRE_SLEP_FORMATO es el nombre a mostrar (decision titular).
+leer_listado_slep <- function() {
+  sl <- readxl::read_excel(RUTA_LISTADO_SLEP, sheet = "Listado SLEP") |> as.data.table()
+  sl <- sl[NUM_REGION == 5, .(cod_comuna = as.character(COD_COM_RBD),
+                              slep_nombre = NOMBRE_SLEP_FORMATO,
+                              anio_traspaso = as.integer(AGNO_TRASPASO_EDUC))]
+  stopifnot(!anyDuplicated(sl$cod_comuna), !any(is.na(sl$anio_traspaso)))
+  sl
 }
 
 # Macrogrupos por RBD desde ENS_01..ENS_11 cruzados con la planilla canonica.
@@ -149,6 +204,60 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
             dependencia = unname(DEPENDENCIAS[COD_DEPE2]),
             rural       = fifelse(RURAL_RBD == "1", "Rural", "Urbano"))]
 
+  # ---- Recodificacion SLEP vigente 2026 (ver bloque de constantes) ----
+  if (TRASPASO_SLEP_VIGENTE_2026) {
+    listado <- leer_listado_slep()
+    # gate: NINGUNA comuna del universo puede faltar en el listado (no se asume
+    # municipal por omision)
+    faltantes <- setdiff(unique(r5$COD_COM_RBD), listado$cod_comuna)
+    if (length(faltantes) > 0)
+      stop("Comunas del universo ausentes del listado SLEP: ",
+           paste(faltantes, collapse = ","), ". No se asume nada: revisar listado.")
+    r5 <- merge(r5, listado, by.x = "COD_COM_RBD", by.y = "cod_comuna",
+                all.x = TRUE, sort = FALSE)
+    vigente <- r5$anio_traspaso <= ANIO_VIGENCIA_TRASPASO
+    dep5_pre <- r5$COD_DEPE2 == "5"
+    # gates de estado PREVIO (desagregado por comuna; sin doble conteo)
+    stopifnot(sum(dep5_pre) == N_SLEP_DEP5_DIRECTORIO)
+    for (cc in names(SLEP_DEP5_POR_COMUNA))
+      stopifnot(sum(dep5_pre & r5$COD_COM_RBD == cc) == SLEP_DEP5_POR_COMUNA[[cc]])
+    stopifnot(all(vigente[dep5_pre]))          # todo dep5 previo esta en comuna vigente
+    recod <- vigente & !dep5_pre & r5$COD_DEPE2 == "1"   # SOLO municipales cambian
+    stopifnot(sum(recod) == N_SLEP_RECODIFICADOS,
+              sum(recod & dep5_pre) == 0)      # sin doble conteo (por construccion)
+    for (sn in names(SLEP_RECOD_POR_SLEP))
+      stopifnot(sum(recod & r5$slep_nombre == sn) == SLEP_RECOD_POR_SLEP[[sn]])
+    # aplicar: dependencia mostrada = SLEP + nombre. El nombre del SLEP marca
+    # SOLO a los EE administrados por el SLEP (dep5 tras la regla): un particular
+    # de una comuna traspasada NO es del SLEP.
+    r5[recod, `:=`(COD_DEPE2 = "5", dependencia = DEPENDENCIAS[["5"]])]
+    r5[COD_DEPE2 != "5", slep_nombre := NA_character_]
+    # gates de estado POSTERIOR
+    stopifnot(sum(r5$COD_DEPE2 == "5") == N_SLEP_TOTAL_ESPERADO,
+              sum(!is.na(r5$slep_nombre)) == N_SLEP_TOTAL_ESPERADO,
+              sum(r5$COD_COM_RBD == COMUNA_ZAPALLAR & r5$COD_DEPE2 == "1") ==
+                MUNICIPALES_NO_TRASPASADOS[["zapallar"]],
+              sum(r5$COD_COM_RBD == COMUNA_SANTO_DOMINGO & r5$COD_DEPE2 == "1") ==
+                MUNICIPALES_NO_TRASPASADOS[["santo_domingo"]],
+              sum(r5$COD_COM_RBD %chin% COMUNAS_DEL_LITORAL & r5$COD_DEPE2 == "1") ==
+                MUNICIPALES_NO_TRASPASADOS[["del_litoral"]],
+              sum(r5$COD_COM_RBD %chin% COMUNAS_QUILLOTA & r5$COD_DEPE2 == "1") ==
+                MUNICIPALES_NO_TRASPASADOS[["quillota"]])
+    log_msg(sprintf(paste0("Recodificacion SLEP vigente 2026: %d dep5 del directorio + ",
+                    "%d recodificados = %d EE SLEP (%s). Municipales no traspasados ",
+                    "intactos: Zapallar %d, Sto Domingo %d, del Litoral %d, Quillota %d."),
+                    N_SLEP_DEP5_DIRECTORIO, sum(recod), sum(r5$COD_DEPE2 == "5"),
+                    paste(sprintf("%s=%d", names(SLEP_RECOD_POR_SLEP), SLEP_RECOD_POR_SLEP),
+                          collapse = " "),
+                    MUNICIPALES_NO_TRASPASADOS[["zapallar"]],
+                    MUNICIPALES_NO_TRASPASADOS[["santo_domingo"]],
+                    MUNICIPALES_NO_TRASPASADOS[["del_litoral"]],
+                    MUNICIPALES_NO_TRASPASADOS[["quillota"]]),
+            origen = "34_directorio")
+  } else {
+    r5[, slep_nombre := NA_character_]
+  }
+
   # geo: decimal con coma en el directorio 2025
   r5[, `:=`(lat = suppressWarnings(as.numeric(gsub(",", ".", LATITUD))),
             lon = suppressWarnings(as.numeric(gsub(",", ".", LONGITUD))))]
@@ -178,7 +287,7 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   out <- r5[, .(rbd = RBD, dgv = DGV_RBD, nombre = NOM_RBD,
                 cod_comuna = COD_COM_RBD, comuna = NOM_COM_RBD,
                 cod_provincia = COD_PRO_RBD, provincia,
-                cod_dependencia = COD_DEPE2, dependencia, rural,
+                cod_dependencia = COD_DEPE2, dependencia, slep_nombre, rural,
                 lat, lon, geo_valida,
                 matricula_flag = MATRICULA, mat_total = MAT_TOTAL,
                 codigos_ense, macrogrupos)]

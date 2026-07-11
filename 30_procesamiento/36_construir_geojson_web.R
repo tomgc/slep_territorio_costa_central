@@ -41,6 +41,7 @@ suppressMessages({ library(data.table); library(jsonlite) })
 RUTA_UNIVERSO    <- ruta_salidas("mapa_interactivo", "directorio_region5.rds")
 RUTA_MATRICULA   <- ruta_salidas("mapa_interactivo", "matricula_historica_r5.rds")
 RUTA_MACROGRUPOS <- ruta_insumos("auxiliares", "codigo_tipo_y_macrogrupo.xlsx")
+RUTA_LISTADO_SLEP <- ruta_insumos("auxiliares", "listado_slep_2026.xlsx")
 DIR_CSV_2025     <- ruta_insumos("historico_matricula", "Matricula-por-estudiante-2025")
 DIR_WEB_DATA     <- ruta_salidas("mapa_interactivo", "web", "data")
 RUTA_GEOJSON     <- file.path(DIR_WEB_DATA, "establecimientos.geojson")
@@ -50,6 +51,7 @@ RUTA_METADATOS   <- file.path(DIR_WEB_DATA, "metadatos.json")
 # ---- 5. Constantes nombradas ----
 ANIO_ACTUAL     <- 2025L
 FECHA_CORTE     <- "2025-04-30"     # corte oficial del directorio y matricula (fija: idempotencia)
+ANIO_VIGENCIA_SLEP <- 2026L         # regla de dependencia vigente (ver 34 y metadatos)
 DIGITOS_COORD   <- 5L               # ~1 m de precision; reduce peso del geojson
 PESO_MAX_MB     <- 1                # gate de peso para Pages
 
@@ -184,6 +186,7 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
       com  = fila$comuna,
       prov = fila$provincia,
       dep  = fila$dependencia,
+      slep = fila$slep_nombre,              # NA -> null (solo EE administrados por SLEP)
       mg   = if (is.null(fila$macrogrupos[[1]])) list() else as.list(fila$macrogrupos[[1]]),
       ens  = if (is.null(fila$ens[[1]])) list() else fila$ens[[1]],
       ma   = if (is.na(fila$matricula_actual)) TEXTO_SIN_MATRICULA else fila$matricula_actual,
@@ -225,6 +228,7 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
         "insular propio y distorsion del encuadre continental). Decision de alcance,",
         "no descarte definitivo: candidato a capa/inset en v2.")),
     criterios_calculo = list(
+      dependencia = "La dependencia refleja la situación institucional vigente a 2026, incluyendo traspasos a Servicios Locales de Educación posteriores al corte del directorio (30-abr-2025). Comunas con traspaso postergado (Zapallar, Santo Domingo) se mantienen municipales. Fuente: listado oficial de SLEP 2026; recodificación deliberada y documentada respecto del dato literal del directorio.",
       matricula = "Matricula anual por RBD = numero de estudiantes distintos (MRUN unicos) en la base oficial 'Matricula por estudiante'; el identificador se descarta tras agregar y no se publica.",
       matricula_actual = sprintf("Matricula del anio mas reciente disponible (%d). Sin registro ese anio: '%s'", ANIO_ACTUAL, TEXTO_SIN_MATRICULA),
       max_10 = "Mayor matricula anual en la ventana.",
@@ -235,14 +239,31 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
       niveles = "Pares (tipo de ensenanza, nivel) observados en la matricula 2025, decodificados con el Anexo V (a partir de 2019) del esquema oficial; tipo agrupado segun planilla canonica de macrogrupos."),
     glosario_claves = list(
       rbd = "Rol Base de Datos", n = "nombre", com = "comuna", prov = "provincia",
-      dep = "dependencia (COD_DEPE2 decodificada)", mg = "macrogrupos de ensenanza",
+      dep = "dependencia (vigente 2026; ver criterios_calculo$dependencia)",
+      slep = "nombre del SLEP que administra el EE (null si no es SLEP)",
+      mg = "macrogrupos de ensenanza",
       ens = "lista {m: macrogrupo, niv: niveles observados}",
       ma = "matricula actual (2025)", mx = "maximo 10 anios",
       pr = "promedio 10 anios", mn = "minimo 10 anios (>0)",
       s  = sprintf("serie anual %d-%d (null = sin registro)", min(ANIOS), max(ANIOS))),
+    filtro_slep = local({
+      # los 8 SLEP continentales de la region (Hanga Roa insular queda fuera de v1),
+      # con estado segun la regla de vigencia: los "pendiente" no tienen EE en el
+      # mapa (el filtro puede mostrarlos deshabilitados).
+      sl <- as.data.table(readxl::read_excel(RUTA_LISTADO_SLEP, sheet = "Listado SLEP"))
+      sl <- sl[NUM_REGION == 5 & NOMBRE_SLEP_FORMATO != "Hanga Roa",
+               .(slep = NOMBRE_SLEP_FORMATO,
+                 anio_traspaso = as.integer(AGNO_TRASPASO_EDUC))]
+      sl <- sl[, .(anio_traspaso = min(anio_traspaso)), by = slep][order(anio_traspaso, slep)]
+      stopifnot(nrow(sl) == 8L)   # los 8 SLEP continentales
+      sl[, estado := fifelse(anio_traspaso <= ANIO_VIGENCIA_SLEP,
+                             "vigente", "pendiente")]
+      lapply(seq_len(nrow(sl)), function(i) as.list(sl[i]))
+    }),
     fuentes = list(
       directorio = "Directorio Oficial de Establecimientos, Centro de Estudios MINEDUC (corte 30-abr).",
       matricula = "Matricula por estudiante 2016-2025, Centro de Estudios MINEDUC.",
+      slep = "Listado oficial de SLEP 2026 (listado_slep_2026.xlsx), incl. hoja de consideraciones especificas.",
       macrogrupos = "Planilla canonica codigo_tipo_y_macrogrupo.xlsx (titular del proyecto)."))
 
   dir.create(DIR_WEB_DATA, showWarnings = FALSE, recursive = TRUE)
