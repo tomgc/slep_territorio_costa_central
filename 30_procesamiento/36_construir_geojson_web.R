@@ -104,19 +104,34 @@ NIVELES_ANEXO_V <- local({
 
 # ---- 6. Funciones ----
 
-# Pares (RBD, COD_ENSE, COD_GRADO) observados en el crudo 2025, filtrados al
-# universo. El MRUN NO se lee (select explicito de 3 columnas).
-pares_observados_2025 <- function(rbd_universo) {
-  f <- list.files(DIR_CSV_2025, pattern = "(?i)\\.csv$", full.names = TRUE)
-  stopifnot(length(f) == 1)
-  hdr <- names(fread(f, sep = ";", nrows = 0))
-  cols <- hdr[match(c("RBD", "COD_ENSE", "COD_GRADO"), toupper(hdr))]
-  stopifnot(!anyNA(cols))
-  dt <- fread(f, sep = ";", select = cols, colClasses = "character",
-              encoding = "UTF-8", showProgress = FALSE)
-  setnames(dt, toupper(names(dt)))
-  unique(dt[RBD %chin% rbd_universo & COD_ENSE != "" & COD_GRADO != "",
-            .(rbd = RBD, cod_ense = COD_ENSE, cod_grado = COD_GRADO)])
+# Pares (RBD, COD_ENSE, COD_GRADO) observados en el ULTIMO ANIO CON MATRICULA de
+# cada RBD (decision del titular 2026-07-11): para los 1.183 con matricula 2025
+# es el crudo 2025 (identico a antes); para los EE en cierre progresivo, su
+# ultimo anio observado en la serie (oferta HISTORICA, marcada con ens_anio).
+# Los EE sin ningun anio quedan sin pares (no hay fuente: el ENS_* del
+# directorio es matricula-dependiente por definicion de su glosa, nota 5).
+# El MRUN NO se lee (select explicito de 3 columnas).
+pares_ultimo_anio <- function(serie) {
+  ultimo <- serie[, .(anio_oferta = max(anio)), by = rbd]
+  res <- vector("list", 0L)
+  for (a in sort(unique(ultimo$anio_oferta), decreasing = TRUE)) {
+    rbds_a <- ultimo[anio_oferta == a, rbd]
+    d <- ruta_insumos("historico_matricula", sprintf("Matricula-por-estudiante-%d", a))
+    f <- list.files(d, pattern = "(?i)\\.csv$", full.names = TRUE)
+    stopifnot(length(f) == 1)
+    hdr <- names(fread(f, sep = ";", nrows = 0))
+    cols <- hdr[match(c("RBD", "COD_ENSE", "COD_GRADO"), toupper(hdr))]
+    stopifnot(!anyNA(cols))
+    dt <- fread(f, sep = ";", select = cols, colClasses = "character",
+                encoding = "UTF-8", showProgress = FALSE)
+    setnames(dt, toupper(names(dt)))
+    p <- unique(dt[RBD %chin% rbds_a & COD_ENSE != "" & COD_GRADO != "",
+                   .(rbd = RBD, cod_ense = COD_ENSE, cod_grado = COD_GRADO)])
+    p[, anio_oferta := a]
+    res[[length(res) + 1L]] <- p
+    rm(dt); invisible(gc(FALSE))
+  }
+  rbindlist(res)
 }
 
 # Serializa un data.table/list a JSON con escritura atomica.
@@ -146,11 +161,11 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
   setnames(planilla, c("cod_ense", "desc_ense", "macrogrupo"))
   planilla[, cod_ense := as.character(as.integer(cod_ense))]
 
-  # pares (tipo, nivel) observados 2025 decodificados; gate si falta glosa
-  pares <- pares_observados_2025(universo$rbd)
+  # pares (tipo, nivel) del ultimo anio con matricula por RBD; gate si falta glosa
+  pares <- pares_ultimo_anio(serie)
   sin_macro <- setdiff(unique(pares$cod_ense), planilla$cod_ense)
   if (length(sin_macro) > 0)
-    stop("COD_ENSE observados 2025 sin macrogrupo en planilla: ",
+    stop("COD_ENSE observados sin macrogrupo en planilla: ",
          paste(sin_macro, collapse = ","), ". Pedir asignacion al titular.")
   pares <- merge(pares, planilla[, .(cod_ense, macrogrupo)], by = "cod_ense")
   sin_glosa <- unique(pares[!NIVELES_ANEXO_V, on = c("cod_ense", "cod_grado")][
@@ -160,14 +175,16 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
          paste(sprintf("%s/%s", sin_glosa$cod_ense, sin_glosa$cod_grado), collapse = " "),
          ". Completar diccionario (no inventar).")
   pares <- merge(pares, NIVELES_ANEXO_V, by = c("cod_ense", "cod_grado"))
-  # por EE: lista macrogrupo -> niveles (para el filtro dependiente)
+  # por EE: lista macrogrupo -> niveles (para el filtro dependiente) + anio de la oferta
   ens_por_ee <- pares[, .(niv = list(sort(unique(nivel)))), by = .(rbd, macrogrupo)]
   ens_lista <- ens_por_ee[, .(ens = list(unname(mapply(function(m, n) list(m = m, niv = n),
                                                        macrogrupo, niv, SIMPLIFY = FALSE)))),
                           by = rbd]
-  log_msg(sprintf("Pares tipo-nivel 2025: %d pares distintos en %d EE (todos con glosa).",
-                  nrow(unique(pares[, .(cod_ense, cod_grado)])), uniqueN(pares$rbd)),
-          origen = "36_geojson")
+  ens_lista <- merge(ens_lista, unique(pares[, .(rbd, ens_anio = anio_oferta)]), by = "rbd")
+  n_hist <- ens_lista[ens_anio < ANIO_ACTUAL, .N]
+  log_msg(sprintf("Pares tipo-nivel: %d pares distintos en %d EE (todos con glosa); %d EE con oferta HISTORICA (ultimo anio < %d).",
+                  nrow(unique(pares[, .(cod_ense, cod_grado)])), uniqueN(pares$rbd),
+                  n_hist, ANIO_ACTUAL), origen = "36_geojson")
 
   # ---- ensamble por EE ----
   d <- merge(universo, ind, by = "rbd", all.x = TRUE)
@@ -189,6 +206,7 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
       slep = fila$slep_nombre,              # NA -> null (solo EE administrados por SLEP)
       mg   = if (is.null(fila$macrogrupos[[1]])) list() else as.list(fila$macrogrupos[[1]]),
       ens  = if (is.null(fila$ens[[1]])) list() else fila$ens[[1]],
+      ensa = if (is.null(fila$ens[[1]])) NA_integer_ else fila$ens_anio,  # anio de la oferta (< 2025 = historica)
       ma   = if (is.na(fila$matricula_actual)) TEXTO_SIN_MATRICULA else fila$matricula_actual,
       mx   = if (is.na(fila$max_10))  ETIQUETA_SIN_DATO else fila$max_10,
       pr   = if (is.na(fila$prom_10)) ETIQUETA_SIN_DATO else round(fila$prom_10),  # redondeo SOLO aqui
@@ -239,13 +257,14 @@ if (sys.nframe() == 0 || identical(environment(), globalenv())) {
       min_10 = sprintf("Menor matricula anual entre los anios CON REGISTRO en la ventana. Los anios sin registro (huecos de la serie) no se computan como 0 ni arrastran el minimo (la fuente no contiene matriculas 0 explicitas: un RBD-anio sin estudiantes simplemente no tiene fila). Sin ningun anio con registro: '%s' (nunca 0).", ETIQUETA_SIN_DATO),
       nota_serie_corta = "En EE con un solo anio de dato en la ventana, los cuatro indicadores coinciden por construccion.",
       parvularia = "Los parvulos de escuelas con RBD estan incluidos via la base oficial; los jardines JUNJI/Integra sin RBD no forman parte del universo (fuente separada, corte distinto).",
-      niveles = "Pares (tipo de ensenanza, nivel) observados en la matricula 2025, decodificados con el Anexo V (a partir de 2019) del esquema oficial; tipo agrupado segun planilla canonica de macrogrupos."),
+      niveles = "Pares (tipo de ensenanza, nivel) observados en la matricula del ULTIMO anio con registro de cada RBD, decodificados con el Anexo V (a partir de 2019) del esquema oficial; tipo agrupado segun planilla canonica de macrogrupos. Si el ultimo anio es anterior a 2025 (EE en cierre progresivo), la oferta es HISTORICA y el campo ensa lo indica. Los EE sin ningun anio de matricula no tienen oferta derivable: el ENS_* del directorio es matricula-dependiente por definicion de su glosa (nota 5), no un registro de autorizacion administrativa."),
     glosario_claves = list(
       rbd = "Rol Base de Datos", n = "nombre", com = "comuna", prov = "provincia",
       dep = "dependencia (vigente 2026; ver criterios_calculo$dependencia)",
       slep = "nombre del SLEP que administra el EE (null si no es SLEP)",
       mg = "macrogrupos de ensenanza",
       ens = "lista {m: macrogrupo, niv: niveles observados}",
+      ensa = "anio del que proviene la oferta (2025 = vigente; anterior = historica, EE en cierre; null = sin oferta derivable)",
       ma = "matricula actual (2025)", mx = "maximo 10 anios",
       pr = "promedio 10 anios", mn = "minimo 10 anios (>0)",
       s  = sprintf("serie anual %d-%d (null = sin registro)", min(ANIOS), max(ANIOS))),

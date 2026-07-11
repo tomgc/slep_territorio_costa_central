@@ -120,3 +120,32 @@ además endurecido: hueco = todo valor no numérico (`esNum`), no solo `null`.
 CONSUMIDOR (parsear con el mismo runtime que los consumirá, o al menos con grep sobre el
 texto crudo), no solo desde el productor: el parser del productor puede normalizar
 silenciosamente exactamente el defecto que el consumidor va a sufrir.
+
+---
+
+## ADDENDUM 2 (2026-07-11) — Oferta educativa: del crudo 2025 al último año con matrícula
+
+**Qué cambió (autorizado por el titular; solo 36).** El campo `ens` se derivaba únicamente
+del crudo 2025, dejando sin oferta a los 85 EE sin fila ese año. Ahora se deriva del
+**último año con matrícula de cada RBD** (serie de 35 como índice): los 1.183 con matrícula
+2025 quedan idénticos (verificado campo a campo, 0 diferencias); los 25 en cierre
+progresivo reciben su oferta HISTÓRICA (la de su último año), marcada con el campo nuevo
+`ensa` (año de procedencia; 2025 = vigente). Los 60 sin ningún año siguen sin `ens` — y el
+front-end ahora lo declara en vez de callar.
+
+**Por qué no se rellenó desde el directorio (diagnóstico previo).** ENS_01..11 del
+directorio está en 0 para los 85 (verificado uno a uno): la glosa oficial (nota 5) define
+ENS_xx como códigos "con al menos un alumno matriculado al 30 de abril" — es
+matrícula-dependiente por definición, no un registro de autorización administrativa. No
+existe fuente para los 60; para los 25 la única fuente es el histórico, que es lo aplicado.
+
+**Verificación (tolerancia 0):** indicadores y series de los 1.268 idénticos pre/post;
+`ens` de los 1.183 idéntico; 25/25 pasan de vacío a poblado con `ensa` < 2025; 60/60
+siguen vacíos con `ensa` null; 0 de los 1.183 con flag histórico; idempotente
+(hash `c4725354…` ×2); `docs/data/` sincronizado; la normalización defensiva del
+consumidor (auto_unbox) verificada con los pares nuevos (ofertas de un solo nivel).
+
+**Hallazgo hermano documentado de paso:** `auto_unbox` también convierte arrays de UN
+elemento en escalares (`niv:"Nivel Medio Mayor"`), lo que rompió el front (`niv.map is not
+a function`, RBD 14219). Resuelto con normalización a array en el consumidor. Tercera
+evidencia de la regla: los artefactos R→JS se auditan desde el consumidor.
