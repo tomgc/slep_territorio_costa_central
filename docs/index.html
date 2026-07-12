@@ -24,6 +24,24 @@
       <p class="nota-suave">Pasa el cursor sobre un pin para identificarlo; haz clic para ver su matrícula actual e histórica.</p>
     </section>
 
+    <section class="bloque" id="bloque-filtros">
+      <h2>Filtros</h2>
+      <div class="filtro"><label for="f-prov">Provincia</label><select id="f-prov"></select></div>
+      <div class="filtro"><label for="f-com">Comuna</label><select id="f-com"></select></div>
+      <div class="filtro"><label for="f-dep">Dependencia</label><select id="f-dep"></select></div>
+      <div class="filtro"><label for="f-slep">Servicio Local de Educación</label><select id="f-slep"></select></div>
+      <div class="filtro"><label for="f-ee">Establecimiento</label>
+        <div class="combobox">
+          <input id="f-ee" type="text" placeholder="Busca por nombre o RBD" autocomplete="off">
+          <div id="f-ee-lista" class="combobox-lista" hidden></div>
+        </div>
+        <div id="f-ee-sel" class="combobox-sel" hidden></div>
+      </div>
+      <div class="filtro"><label for="f-tipo">Tipo de enseñanza</label><select id="f-tipo"></select></div>
+      <div class="filtro" id="f-nivel-wrap" hidden><label for="f-nivel">Nivel</label><select id="f-nivel"></select></div>
+      <button id="f-limpiar" class="boton-limpiar" type="button">Limpiar filtros</button>
+    </section>
+
     <section class="bloque">
       <h2>Leyenda</h2>
       <div id="leyenda" class="leyenda"></div>

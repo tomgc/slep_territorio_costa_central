@@ -264,6 +264,193 @@ function crearCapa(mapa, renderer) {
   return grupo;
 }
 
+/* =============================================================================
+   FILTROS (hito 3) — 7 filtros acumulativos con opciones dependientes.
+   - Estado 100% en memoria (F). match(p) = AND de los filtros activos.
+   - Opciones estilo FACETA: las de cada filtro se calculan sobre el subconjunto
+     que cumple TODOS LOS DEMAS filtros (permite cambiar la seleccion propia sin
+     quedar atrapado). Opciones sin EE disponibles quedan deshabilitadas.
+   - Tipo de ensenanza filtra por p.ens (pares observados), NO por p.mg:
+     asi los 25 con oferta HISTORICA aparecen al filtrar su macrogrupo (quien
+     filtra "Educacion Parvularia" debe saber que ahi HUBO un jardin que cerro;
+     el tooltip/tarjeta ya los marca "Impartia hasta 20XX"), y los 60 sin
+     registro no aparecen en ningun filtro de ensenanza (no hay dato).
+   - Nivel: solo visible con Tipo elegido; cambiar el Tipo lo RESETEA (sin
+     filtros huerfanos). Orden de aplicacion indiferente: match es funcion pura
+     del estado.
+   ============================================================================= */
+const ORDEN_TIPOS = ['Educación Parvularia', 'Enseñanza Básica', 'Enseñanza Media HC',
+                     'Enseñanza Media TP', 'Educación de Adultos', 'Educación Especial'];
+const F = { prov: null, com: null, dep: null, slep: null, rbd: null, tipo: null, nivel: null };
+
+const PRED = {
+  prov:  (p, v) => p.prov === v,
+  com:   (p, v) => p.com === v,
+  dep:   (p, v) => p.dep === v,
+  slep:  (p, v) => p.slep === v,
+  rbd:   (p, v) => p.rbd === v,
+  tipo:  (p, v) => p.ens.some(e => e.m === v),
+  nivel: (p, v) => F.tipo !== null && p.ens.some(e => e.m === F.tipo && e.niv.includes(v))
+};
+function cumple(p, excepto) {
+  for (const k of Object.keys(PRED)) {
+    if (k === excepto || F[k] === null) continue;
+    if (!PRED[k](p, F[k])) return false;
+  }
+  return true;
+}
+function hayFiltrosActivos() { return Object.values(F).some(v => v !== null); }
+
+/* -- reconstruccion de opciones dependientes -- */
+function opcionesSelect(sel, valores, etiquetaDe, todasTxt, disponibles) {
+  const actual = F[sel.dataset.clave];
+  sel.innerHTML = '';
+  const op0 = document.createElement('option');
+  op0.value = ''; op0.textContent = todasTxt; sel.appendChild(op0);
+  for (const v of valores) {
+    const op = document.createElement('option');
+    op.value = v; op.textContent = etiquetaDe(v);
+    op.disabled = !disponibles.has(v) && v !== actual;
+    if (v === actual) op.selected = true;
+    sel.appendChild(op);
+  }
+}
+function reconstruirOpciones() {
+  const g = id => document.getElementById(id);
+  const dispo = clave => {
+    const s = new Set();
+    for (const f of S.ee) { const p = f.properties; if (cumple(p, clave)) {
+      if (clave === 'tipo') p.ens.forEach(e => s.add(e.m));
+      else if (clave === 'nivel') p.ens.forEach(e => { if (e.m === F.tipo) e.niv.forEach(n => s.add(n)); });
+      else { const v = p[clave === 'com' ? 'com' : clave]; if (v != null) s.add(v); }
+    } }
+    return s;
+  };
+  const provs = [...new Set(S.ee.map(f => f.properties.prov))].sort((a, b) => a.localeCompare(b, 'es'));
+  opcionesSelect(g('f-prov'), provs, v => v, 'Todas', dispo('prov'));
+  const coms = [...new Set(S.ee.map(f => f.properties.com))].sort((a, b) => a.localeCompare(b, 'es'));
+  opcionesSelect(g('f-com'), coms, v => titulo(v), 'Todas', dispo('com'));
+  const deps = ['Servicio Local de Educación', 'Municipal', 'Particular Subvencionado',
+                'Particular Pagado', 'Corp. de Administración Delegada'];
+  opcionesSelect(g('f-dep'), deps, v => ETIQUETA_DEP[v] || v, 'Todas', dispo('dep'));
+  const sleps = (S.meta.filtro_slep || []).filter(x => x.estado === 'vigente').map(x => x.slep);
+  opcionesSelect(g('f-slep'), sleps, v => v, 'Todos', dispo('slep'));
+  opcionesSelect(g('f-tipo'), ORDEN_TIPOS, v => v, 'Todos', dispo('tipo'));
+  // Nivel: solo con Tipo elegido
+  const wrap = g('f-nivel-wrap');
+  wrap.hidden = F.tipo === null;
+  if (F.tipo !== null) {
+    const nivs = [...dispoNivelesDelTipo()].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+    opcionesSelect(g('f-nivel'), nivs, v => v, 'Todos', dispo('nivel'));
+  }
+}
+function dispoNivelesDelTipo() {
+  // universo de niveles del tipo elegido (sobre el subconjunto que cumple lo demas)
+  const s = new Set();
+  for (const f of S.ee) { const p = f.properties;
+    if (cumple(p, 'nivel')) p.ens.forEach(e => { if (e.m === F.tipo) e.niv.forEach(n => s.add(n)); });
+  }
+  return s;
+}
+
+/* -- combobox de establecimiento -- */
+function iniciarCombobox() {
+  const inp = document.getElementById('f-ee');
+  const lista = document.getElementById('f-ee-lista');
+  const selBox = document.getElementById('f-ee-sel');
+  const MAX_VISIBLES = 30;
+  const candidatos = q => {
+    q = q.trim().toLowerCase();
+    if (!q) return [];
+    const out = [];
+    for (const f of S.ee) { const p = f.properties;
+      if (!cumple(p, 'rbd')) continue;                       // respeta los demas filtros
+      if (p.n.toLowerCase().includes(q) || p.rbd.startsWith(q)) out.push(p);
+    }
+    return out;
+  };
+  const render = () => {
+    const c = candidatos(inp.value);
+    if (!inp.value.trim()) { lista.hidden = true; return; }
+    lista.hidden = false;
+    if (!c.length) { lista.innerHTML = '<div class="combobox-vacio">Sin coincidencias con los filtros vigentes.</div>'; return; }
+    lista.innerHTML = c.slice(0, MAX_VISIBLES).map(p =>
+      `<div class="combobox-item" data-rbd="${p.rbd}">${titulo(p.n)} <span class="cb-rbd">RBD ${p.rbd} · ${titulo(p.com)}</span></div>`).join('') +
+      (c.length > MAX_VISIBLES ? `<div class="combobox-mas">${c.length - MAX_VISIBLES} coincidencias más: sigue escribiendo para acotar.</div>` : '');
+  };
+  inp.addEventListener('input', render);
+  inp.addEventListener('focus', render);
+  document.addEventListener('click', ev => { if (!ev.target.closest('.combobox')) lista.hidden = true; });
+  lista.addEventListener('click', ev => {
+    const item = ev.target.closest('.combobox-item');
+    if (!item) return;
+    F.rbd = item.dataset.rbd;
+    const p = S.marcadores.get(F.rbd)._props;
+    selBox.hidden = false;
+    selBox.innerHTML = `<span>${titulo(p.n)} (RBD ${p.rbd})</span><button type="button" aria-label="Quitar establecimiento">×</button>`;
+    selBox.querySelector('button').addEventListener('click', () => {
+      F.rbd = null; selBox.hidden = true; inp.value = ''; aplicarFiltros();
+    });
+    inp.value = ''; lista.hidden = true;
+    aplicarFiltros();
+  });
+}
+
+/* -- aplicacion: estilos, contador, cero-resultados, opciones -- */
+function aplicarFiltros() {
+  const activos = hayFiltrosActivos();
+  let n = 0;
+  const coincidentes = [];
+  S.marcadores.forEach(m => {
+    const p = m._props;
+    const ok = !activos || cumple(p, null);
+    if (ok) { n++; coincidentes.push(m); }
+    m.setStyle(ok ?
+      { fillColor: colorDe(p), fillOpacity: 0.92, color: '#ffffff', weight: 1.5 } :
+      { fillColor: COLOR_ATENUADO, fillOpacity: 0.5, color: '#ffffff', weight: 1 });
+  });
+  coincidentes.forEach(m => m.bringToFront());   // coincidentes plenos ENCIMA
+  document.getElementById('contador').textContent =
+    `${n.toLocaleString('es-CL')} de ${S.total.toLocaleString('es-CL')}`;
+  // cero resultados: mensaje explicito + deshacer (nunca mapa vacio y mudo)
+  let cero = document.getElementById('cero-resultados');
+  if (activos && n === 0) {
+    if (!cero) {
+      cero = document.createElement('div');
+      cero.id = 'cero-resultados'; cero.className = 'cero-resultados';
+      cero.innerHTML = '<p>Ningún establecimiento cumple esta combinación de filtros.</p>' +
+        '<button type="button" class="boton-limpiar">Limpiar filtros</button>';
+      cero.querySelector('button').addEventListener('click', limpiarFiltros);
+      document.getElementById('mapa').appendChild(cero);
+    }
+  } else if (cero) cero.remove();
+  reconstruirOpciones();
+}
+function limpiarFiltros() {
+  for (const k of Object.keys(F)) F[k] = null;
+  const selBox = document.getElementById('f-ee-sel');
+  selBox.hidden = true; selBox.innerHTML = '';
+  document.getElementById('f-ee').value = '';
+  document.getElementById('f-nivel-wrap').hidden = true;
+  aplicarFiltros();
+}
+function iniciarFiltros() {
+  const enlazar = (id, clave) => {
+    const sel = document.getElementById(id);
+    sel.dataset.clave = clave;
+    sel.addEventListener('change', () => {
+      F[clave] = sel.value === '' ? null : sel.value;
+      if (clave === 'tipo') F.nivel = null;      // cambiar Tipo RESETEA Nivel (sin huerfanos)
+      aplicarFiltros();
+    });
+  };
+  enlazar('f-prov', 'prov'); enlazar('f-com', 'com'); enlazar('f-dep', 'dep');
+  enlazar('f-slep', 'slep'); enlazar('f-tipo', 'tipo'); enlazar('f-nivel', 'nivel');
+  document.getElementById('f-limpiar').addEventListener('click', limpiarFiltros);
+  iniciarCombobox();
+  reconstruirOpciones();
+}
+
 /* ---- Arranque ---- */
 async function iniciar() {
   const [geo, meta, frontera, fronteraRegion, rotulosComuna] = await Promise.all([
@@ -358,7 +545,8 @@ async function iniciar() {
     aplicarRadios();
     ajustarRotulos();
     new ResizeObserver(() => mapa.invalidateSize()).observe(cont);
-    window.__M = { mapa, S };   // handle de inspeccion (sin estado persistente)
+    iniciarFiltros();           // requiere marcadores ya creados
+    window.__M = { mapa, S, F, aplicarFiltros, limpiarFiltros };   // handle de inspeccion (sin estado persistente)
     } catch (e) { window.__errMontar = e.message + ' @ ' + (e.stack || '').split('\n')[1]; throw e; }
   };
   montar();
