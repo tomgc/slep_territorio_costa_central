@@ -137,7 +137,7 @@ una afirmación verificable y no una estimación.
 | 4 | v04 | s/n (4 operaciones) | Opus 4.8 | Migración a GitHub; purga de historial; diseño de la variante escala única |
 | 5 | v05 | s/n (3 bloques) | Opus 4.8 | Construcción y auditoría de la variante escala única; pulido en Affinity |
 | 6 | v06 | s/n (9 bloques) | Fable | Variante 3 completa: pipeline 34→35→36 y mapa interactivo publicado |
-| 7 | v07 | (en curso) | Fable | Cierre de deuda de gobernanza y documental |
+| 7 | v07 | 5 (20–24) | Fable | Cierre de deuda de gobernanza y documental |
 
 `s/n` = sin numeración correlativa, por la discontinuidad declarada en §2.1.
 
@@ -373,18 +373,60 @@ completa.
     partir del segundo cierre; el proyecto llegó al séptimo sin él). Incluye la
     declaración explícita de la discontinuidad de numeración (§2.1) en vez de una
     renumeración retroactiva inventada. *(Documentación y deuda)*
-
-*(Las entradas siguientes de la sesión 7 se agregan a continuación conforme
-avance el trabajo.)*
+21. **Sellado de los intermedios derivados de MRUN en el `.gitignore`.** El ítem
+    venía de v06 como "instruido, no confirmado": la verificación contra el
+    artefacto (`git check-ignore -v`) lo desmintió, ninguna regla cubría
+    `40_salidas/mapa_interactivo/`. Los dos `.rds` derivados del histórico por
+    estudiante (`directorio_region5.rds`, `matricula_historica_r5.rds`) estaban
+    untracked, a un `git add .` de entrar al repositorio. Regla final acotada a
+    `*.rds` (`.gitignore:83`), más `.claude/` en el bloque de sistema. Se descartó
+    la regla paraguas sobre la carpeta completa: `git ls-files` reveló tres JSON
+    trackeados a propósito bajo esa ruta (`web/data/`), que el paraguas habría
+    dejado en el estado trampa "trackeado bajo ruta ignorada". *(Gobernanza)*
+22. **README reescrito.** El anterior (4,27K) documentaba solo las dos variantes de
+    afiche y cerraba en la sesión 5. El nuevo (13,87K) documenta los tres productos
+    en tabla comparativa con sus universos distintos (97 vs. 1.268), la relación
+    con el proyecto padre, el pipeline completo por decenas (incluidos 34/35/36 y
+    `sincronizar_docs.sh`), las reglas de negocio del mapa interactivo en prosa
+    comprensible, y el criterio doble (gobernanza + peso) de qué se versiona.
+    Corregido de paso un bloque de código con la triple comilla sin cerrar, que
+    colapsaba el resto del documento al renderizar en GitHub.
+    *(Documentación y deuda)*
+23. **Formalización de las dos reglas de negocio de mayor peso como archivos de
+    decisión.** `20260712_decision_exclusion_territorio_insular.md` (deja explícito
+    que es exclusión de **alcance, no de calidad**, con la consecuencia operativa
+    de que nadie debe "arreglarla" reincluyendo las islas) y
+    `20260712_decision_recodificacion_slep_2026.md` (documenta el gate compuesto y
+    la regla técnica aprendida: verificar por partes, no solo el agregado, porque
+    un total único de 343 habría pasado igual con `slep_nombre` mal asignado a
+    establecimientos particulares de comunas traspasadas). Ambas decisiones se
+    tomaron en la sesión 6 pero carecían de archivo propio.
+    *(Documentación y deuda)*
+24. **Corrección del encuadre del proyecto y actualización de `ESTADO.md`.** El
+    titular definió la relación con `slep_estudio_oferta_demanda`, que ningún
+    artefacto establecía: el proyecto empezó autónomo (el afiche, producto de
+    identidad institucional) y fue absorbido como componente del estudio al llegar
+    la variante 3; hoy es un **producto derivado**. Es la única explicación honesta
+    de por qué conviven dos universos en un mismo repositorio. `ESTADO.md`, que
+    estaba desactualizado en dos sesiones, se corrigió: `semaforo` de `cerrado` a
+    `activo` (hay trabajo ejecutable por el titular; los bloqueantes externos son
+    ítems puntuales, no el proyecto detenido). *(Documentación y deuda)*
 
 ---
 
 ## 6. Delta del backlog
 
-**vs. v06:** primera versión del archivo canónico. Reconstruye el histórico
-completo de las sesiones 1 a 6 desde los seis traspasos; conserva literal la serie
-numerada 1–19 (sesiones 1–2); registra las sesiones 3–6 sin numeración
-correlativa, con la granularidad que cada traspaso documentó; consolida la
-taxonomía temática en 13 categorías (unifica las propuestas parciales de v01, v02
-y v05); declara la discontinuidad de numeración como hecho histórico; reanuda la
-serie correlativa en el cambio 20.
+**vs. v06 (creación del archivo, sesión 7):** primera versión del archivo canónico.
+Reconstruye el histórico completo de las sesiones 1 a 6 desde los seis traspasos;
+conserva literal la serie numerada 1–19 (sesiones 1–2); registra las sesiones 3–6
+sin numeración correlativa, con la granularidad que cada traspaso documentó;
+consolida la taxonomía temática en 13 categorías (unifica las propuestas parciales
+de v01, v02 y v05); declara la discontinuidad de numeración como hecho histórico;
+reanuda la serie correlativa en el cambio 20.
+
+**Sesión 7 (v07):** 5 entradas nuevas (cambios 20 a 24). Sin refinamientos de
+taxonomía ni reclasificaciones: las 13 categorías consolidadas en esta misma sesión
+absorbieron las cinco entradas sin ajuste. Las cuatro entradas posteriores al
+cambio 20 (21 a 24) se incorporaron al inicio de la sesión 8, tal como el §14 del
+traspaso v07 lo dejó declarado. La serie correlativa queda íntegra y sin saltos
+desde el 20.
