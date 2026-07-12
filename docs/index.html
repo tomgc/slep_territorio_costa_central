@@ -42,6 +42,16 @@
       <button id="f-limpiar" class="boton-limpiar" type="button">Limpiar filtros</button>
     </section>
 
+    <section class="bloque" id="bloque-exportar">
+      <h2>Exportar</h2>
+      <button id="btn-svg" class="boton-exportar" type="button">Descargar mapa (SVG)</button>
+      <button id="btn-xlsx" class="boton-exportar" type="button">Descargar datos (XLSX)</button>
+      <p class="nota-suave">El SVG captura la vista visible con los filtros aplicados
+        (pins, fronteras y rótulos vectoriales; sin el fondo cartográfico, que es
+        imagen raster de CARTO). El XLSX incluye los datos según los filtros activos,
+        con los establecimientos sin coordenadas cuando el filtro los alcanza.</p>
+    </section>
+
     <section class="bloque">
       <h2>Leyenda</h2>
       <div id="leyenda" class="leyenda"></div>

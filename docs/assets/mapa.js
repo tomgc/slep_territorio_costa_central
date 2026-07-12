@@ -451,6 +451,268 @@ function iniciarFiltros() {
   reconstruirOpciones();
 }
 
+/* =============================================================================
+   EXPORTACIÓN (hito 4) — SVG de la vista actual + XLSX de los datos filtrados.
+   - SVG: vectores puros (pins, frontera regional, frontera Costa Central,
+     rótulos de comuna, leyenda, título y atribución) proyectados con el zoom y
+     encuadre VIGENTES. El fondo cartográfico (tiles CARTO) es imagen raster y
+     NO se incrusta: se declara en la nota del pie del propio SVG. Con filtro
+     activo, los no coincidentes van ATENUADOS (misma lectura que la pantalla:
+     sin basemap, son la única referencia geográfica del territorio).
+   - XLSX: SheetJS LOCAL (assets/vendor, sin CDN) con carga diferida (~930 KB:
+     no penaliza la carga inicial). Filas = universo completo o filtrado según
+     F, INCLUYENDO los EE sin coordenadas que el filtro alcance ("existen aunque
+     no se pinchen"). Números como celdas numéricas nativas: Excel/Numbers en
+     locale español los muestra con punto de miles y coma decimal sin
+     conversión alguna. Literales tal cual el JSON ("Sin matrícula en 2025.",
+     "sin dato"); año sin registro = celda vacía (nunca 0).
+   ============================================================================= */
+function escXML(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function slugArchivo(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function fechaLocalISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function partesFiltro() {
+  const partes = [];
+  if (F.prov)  partes.push(['Provincia', F.prov]);
+  if (F.com)   partes.push(['Comuna', titulo(F.com)]);
+  if (F.dep)   partes.push(['Dependencia', ETIQUETA_DEP[F.dep] || F.dep]);
+  if (F.slep)  partes.push(['SLEP', F.slep]);
+  if (F.rbd) {
+    const m = S.marcadores.get(F.rbd);
+    partes.push(['Establecimiento', m ? `${titulo(m._props.n)} (RBD ${F.rbd})` : `RBD ${F.rbd}`]);
+  }
+  if (F.tipo)  partes.push(['Tipo de enseñanza', F.tipo]);
+  if (F.nivel) partes.push(['Nivel', F.nivel]);
+  return partes;
+}
+function descripcionFiltro() {
+  const p = partesFiltro();
+  return p.length ? p.map(([k, v]) => `${k}: ${v}`).join(' · ') : null;
+}
+// nombre con sentido: el filtro aplicado si lo hay; la fecha si no
+function nombreArchivo(base, ext) {
+  const p = partesFiltro();
+  const sufijo = p.length ? p.map(([, v]) => slugArchivo(v)).join('_').slice(0, 90)
+                          : fechaLocalISO();
+  return `${base}_${sufijo}.${ext}`;
+}
+function descargarBlob(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+/* ---- SVG ---- */
+const SVG_CAB = 96, SVG_PIE = 60;          // bandas de título y atribución
+const FUENTE_TITULO = 'gobCL, Helvetica, Arial, sans-serif';
+const FUENTE_TEXTO  = 'Museo Sans, Helvetica, Arial, sans-serif';
+// anillos de un (Multi)Polygon GeoJSON como path SVG (proyección pt: [lon,lat]→{x,y})
+function pathDeGeojson(gj, pt) {
+  const geoms = (gj.features ? gj.features.map(f => f.geometry) : [gj.geometry || gj]);
+  const anillo = cs => 'M' + cs.map(c => { const q = pt(c); return `${q.x.toFixed(1)} ${q.y.toFixed(1)}`; }).join('L') + 'Z';
+  let d = '';
+  for (const g of geoms) {
+    if (!g) continue;
+    if (g.type === 'Polygon')      g.coordinates.forEach(r => { d += anillo(r); });
+    else if (g.type === 'MultiPolygon') g.coordinates.forEach(pg => pg.forEach(r => { d += anillo(r); }));
+  }
+  return d;
+}
+function construirSVG() {
+  const mapa = S.mapa;
+  const tam = mapa.getSize();
+  const W = Math.round(tam.x), HM = Math.round(tam.y), H = SVG_CAB + HM + SVG_PIE;
+  const activos = hayFiltrosActivos();
+  const pt = c => { const q = mapa.latLngToContainerPoint([c[1], c[0]]); return { x: q.x, y: q.y + SVG_CAB }; };
+
+  // pins: atenuados primero, coincidentes ENCIMA (mismo orden que la pantalla)
+  let aten = '', plenos = '', n = 0;
+  const slepsVista = new Set(), depsVista = new Set();
+  let hayAtenEnVista = false;
+  for (const f of S.ee) {
+    const p = f.properties;
+    const q = pt(f.geometry.coordinates);
+    const ok = !activos || cumple(p, null);
+    if (ok) n++;
+    if (q.x < -20 || q.x > W + 20 || q.y < SVG_CAB - 20 || q.y > SVG_CAB + HM + 20) continue;
+    const r = radioDe(p);
+    if (ok) {
+      plenos += `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${r}" fill="${colorDe(p)}" fill-opacity="0.92" stroke="#ffffff" stroke-width="1.5"/>`;
+      if (p.slep) slepsVista.add(p.slep); else depsVista.add(p.dep);
+    } else {
+      aten += `<circle cx="${q.x.toFixed(1)}" cy="${q.y.toFixed(1)}" r="${Math.max(2.5, r - 1)}" fill="${COLOR_ATENUADO}" fill-opacity="0.5" stroke="#ffffff" stroke-width="1"/>`;
+      hayAtenEnVista = true;
+    }
+  }
+
+  // fronteras (región: contexto tenue; Costa Central: protagonista)
+  const dRegion = pathDeGeojson(S.fronteraRegion, pt);
+  const dCC = pathDeGeojson(S.frontera, pt);
+
+  // rótulos de comuna: misma regla de visibilidad que la pantalla (z>=9)
+  let rotulos = '';
+  if (S.zoomActual >= 9 && S.rotulos) {
+    const fs = S.zoomActual >= 12 ? 13 : S.zoomActual >= 10 ? 11.5 : 10;
+    for (const rc of S.rotulos) {
+      const q = pt([rc.lon, rc.lat]);
+      if (q.x < 0 || q.x > W || q.y < SVG_CAB || q.y > SVG_CAB + HM) continue;
+      rotulos += `<text x="${q.x.toFixed(1)}" y="${q.y.toFixed(1)}" font-family="${FUENTE_TEXTO}" font-size="${fs}" fill="#3A3A3A" text-anchor="middle" stroke="#ffffff" stroke-width="3" paint-order="stroke" letter-spacing=".02em">${escXML(rc.n)}</text>`;
+    }
+  }
+
+  // leyenda: SOLO categorías presentes entre los coincidentes de la vista
+  const items = [];
+  for (const [nom, col] of Object.entries(PAL_SLEP)) if (slepsVista.has(nom)) items.push([col, `SLEP ${nom}`]);
+  for (const [nom, col] of Object.entries(PAL_DEP)) if (depsVista.has(nom)) items.push([col, ETIQUETA_DEP[nom] || nom]);
+  if (activos && hayAtenEnVista) items.push([COLOR_ATENUADO, 'No cumple el filtro aplicado']);
+  const LW = 268, LIH = 19, LPAD = 12;
+  const LH = LPAD * 2 + 16 + items.length * LIH;
+  const lx = W - LW - 14, ly = SVG_CAB + 14;
+  let leyenda = `<g><rect x="${lx}" y="${ly}" width="${LW}" height="${LH}" rx="9" fill="#ffffff" fill-opacity="0.94" stroke="#E2D9C4"/>`;
+  leyenda += `<text x="${lx + LPAD}" y="${ly + LPAD + 10}" font-family="${FUENTE_TITULO}" font-size="12" font-weight="bold" fill="#1C1212">Leyenda</text>`;
+  items.forEach(([col, etq], i) => {
+    const yy = ly + LPAD + 16 + i * LIH + 9;
+    leyenda += `<circle cx="${lx + LPAD + 7}" cy="${yy - 4}" r="6" fill="${col}" stroke="#ffffff" stroke-width="1.5"/>`;
+    leyenda += `<text x="${lx + LPAD + 20}" y="${yy}" font-family="${FUENTE_TEXTO}" font-size="11.5" fill="#2E2230">${escXML(etq)}</text>`;
+  });
+  leyenda += '</g>';
+
+  // cabecera y pie
+  const desc = descripcionFiltro();
+  const linea2 = `${fmt(n)} de ${fmt(S.total)} establecimientos georreferenciados` +
+    (desc ? ` · Filtro — ${desc}` : ' · Sin filtros: universo completo') +
+    ' · Dependencia vigente 2026';
+  const nSinAlc = S.sinGeo.filter(p => !activos || cumple(p, null)).length;
+  const pie1 = 'Elaborado por el Área de Monitoreo a partir de datos del Centro de Estudios MINEDUC (Directorio Oficial y Matrícula por estudiante 2016–2025) y listado oficial de SLEP 2026.';
+  const pie2 = `Exportado el ${fechaLocalISO()} desde el mapa interactivo · El fondo cartográfico (tiles raster de CARTO) no se incluye: este SVG contiene pins, fronteras, rótulos y leyenda vectoriales.`;
+  const pl = nSinAlc === 1 ? '' : 'n';
+  const pie3 = (activos ? 'Los pins atenuados no cumplen el filtro aplicado. ' : '') +
+    (nSinAlc ? `${nSinAlc} establecimiento${nSinAlc === 1 ? '' : 's'} sin coordenadas ` +
+      (activos ? `cumple${pl} el filtro y ` : '') + `no figura${pl} en el mapa (sí en la descarga XLSX).` : '');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Mapa de establecimientos educacionales, Región de Valparaíso">
+<rect width="${W}" height="${H}" fill="#ffffff"/>
+<rect x="0" y="${SVG_CAB}" width="${W}" height="${HM}" fill="#F2F1EC"/>
+<clipPath id="clipmapa"><rect x="0" y="${SVG_CAB}" width="${W}" height="${HM}"/></clipPath>
+<g clip-path="url(#clipmapa)">
+<path d="${dRegion}" fill="none" stroke="#9aa4ad" stroke-width="1" stroke-opacity="0.6"/>
+<path d="${dCC}" fill="${PAL_SLEP['Costa Central']}" fill-opacity="0.03" stroke="${PAL_SLEP['Costa Central']}" stroke-width="1.8" stroke-opacity="0.8"/>
+${aten}${plenos}${rotulos}
+</g>
+${leyenda}
+<text x="20" y="38" font-family="${FUENTE_TITULO}" font-size="21" font-weight="bold" fill="#4A2746">Mapa de establecimientos educacionales · Región de Valparaíso</text>
+<text x="20" y="64" font-family="${FUENTE_TEXTO}" font-size="12.5" fill="#5d5650">${escXML(linea2)}</text>
+<line x1="0" y1="${SVG_CAB - 2}" x2="${W}" y2="${SVG_CAB - 2}" stroke="#4A2746" stroke-width="2"/>
+<text x="20" y="${SVG_CAB + HM + 18}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie1)}</text>
+<text x="20" y="${SVG_CAB + HM + 32}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie2)}</text>
+<text x="20" y="${SVG_CAB + HM + 46}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie3)}</text>
+</svg>`;
+}
+function exportarSVG() {
+  descargarBlob(new Blob([construirSVG()], { type: 'image/svg+xml;charset=utf-8' }),
+                nombreArchivo('mapa_establecimientos_rv', 'svg'));
+}
+
+/* ---- XLSX ---- */
+let promSheetJS = null;
+function cargarSheetJS() {
+  if (window.XLSX) return Promise.resolve();
+  if (!promSheetJS) promSheetJS = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'assets/vendor/xlsx.full.min.js';
+    sc.onload = res;
+    sc.onerror = () => { promSheetJS = null; rej(new Error('no se pudo cargar SheetJS local')); };
+    document.head.appendChild(sc);
+  });
+  return promSheetJS;
+}
+// universo exportable: pins + sin-geo, filtrados con los MISMOS predicados del mapa
+function filasExportables() {
+  const activos = hayFiltrosActivos();
+  const todos = S.ee.map(f => f.properties).concat(S.sinGeo);
+  const sel = todos.filter(p => !activos || cumple(p, null));
+  sel.sort((a, b) => a.com.localeCompare(b.com, 'es') || a.n.localeCompare(b.n, 'es'));
+  return sel;
+}
+function textoEnsExport(p) {
+  if (!p.ens.length) return TEXTO_SIN_OFERTA_CORTO;
+  const base = p.ens.map(e => fraseModalidad(e, true)).join(' · ');
+  return esOfertaHistorica(p) ? `Impartía hasta ${p.ensa}: ${base}` : base;
+}
+function construirLibro() {
+  const anios = S.meta.ventana_anios;
+  const filas = filasExportables();
+  const cab = ['RBD', 'Nombre', 'Comuna', 'Provincia', 'Dependencia', 'SLEP',
+               'Macrogrupos', 'Tipos de enseñanza y niveles', 'Coordenadas',
+               'Matrícula actual (2025)', 'Promedio últimos 10 años',
+               'Máximo últimos 10 años', 'Mínimo últimos 10 años', ...anios];
+  const aoa = [cab];
+  for (const p of filas) {
+    aoa.push([+p.rbd, titulo(p.n), titulo(p.com), p.prov,
+      ETIQUETA_DEP[p.dep] || p.dep, p.slep || null,
+      p.mg.length ? p.mg.join(' · ') : null, textoEnsExport(p), p.geo || null,
+      p.ma, p.pr, p.mx, p.mn,
+      ...p.s.map(v => esNum(v) ? v : null)]);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{ wch: 7 }, { wch: 44 }, { wch: 16 }, { wch: 22 }, { wch: 30 }, { wch: 14 },
+                 { wch: 40 }, { wch: 70 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 20 },
+                 { wch: 20 }, ...anios.map(() => ({ wch: 8 }))];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Establecimientos');
+  // hoja de notas: el archivo debe poder leerse SOLO (sin el mapa al lado)
+  const nGeo = filas.filter(p => !p.geo).length;
+  const notas = [
+    ['Producto', S.meta.producto],
+    ['Exportado', fechaLocalISO()],
+    ['Filtro aplicado', descripcionFiltro() || 'Sin filtro: universo completo'],
+    ['Establecimientos incluidos', filas.length],
+    ['— con coordenadas (pins del mapa)', nGeo],
+    ['— sin coordenadas', filas.length - nGeo],
+    ['Serie anual', 'Celda vacía = año sin registro de matrícula en la fuente (nunca 0).'],
+    ['Dependencia', S.meta.criterios_calculo.dependencia],
+    ['Matrícula', S.meta.criterios_calculo.matricula],
+    ['Mínimo', S.meta.criterios_calculo.min_10],
+    ['Oferta educativa', S.meta.criterios_calculo.niveles],
+    ['Fuentes', `${S.meta.fuentes.directorio} ${S.meta.fuentes.matricula}`]
+  ];
+  const wsN = XLSX.utils.aoa_to_sheet(notas);
+  wsN['!cols'] = [{ wch: 34 }, { wch: 120 }];
+  XLSX.utils.book_append_sheet(wb, wsN, 'Notas');
+  return wb;
+}
+async function exportarXLSX() {
+  await cargarSheetJS();
+  const out = XLSX.write(construirLibro(), { bookType: 'xlsx', type: 'array' });
+  descargarBlob(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                nombreArchivo('establecimientos_rv', 'xlsx'));
+}
+function iniciarExportacion() {
+  const bSvg = document.getElementById('btn-svg');
+  const bXlsx = document.getElementById('btn-xlsx');
+  bSvg.addEventListener('click', () => {
+    try { exportarSVG(); }
+    catch (e) { alert(`No se pudo generar el SVG: ${e.message}`); }
+  });
+  bXlsx.addEventListener('click', async () => {
+    bXlsx.disabled = true;
+    try { await exportarXLSX(); }
+    catch (e) { alert(`No se pudo generar el XLSX: ${e.message}`); }
+    finally { bXlsx.disabled = false; }
+  });
+}
+
 /* ---- Arranque ---- */
 async function iniciar() {
   const [geo, meta, frontera, fronteraRegion, rotulosComuna] = await Promise.all([
@@ -475,12 +737,14 @@ async function iniciar() {
     sg.forEach(normalizar); S.sinGeo = sg;
   });
   S.ee = geo.features; S.meta = meta; S.total = geo.features.length;
+  S.frontera = frontera; S.fronteraRegion = fronteraRegion; S.rotulos = rotulosComuna;
 
   const montar = () => {
     try {
     const cont = document.getElementById('mapa');
     if (cont.clientWidth === 0 || cont.clientHeight === 0) { setTimeout(montar, 120); return; }
     const mapa = L.map('mapa', { preferCanvas: true, zoomControl: true });
+    S.mapa = mapa;                           // referencia para la exportacion SVG
     // pane de rotulos BAJO los pins (overlayPane=400): los pins nunca quedan tapados
     mapa.createPane('rotulos');
     mapa.getPane('rotulos').style.zIndex = 340;
@@ -546,7 +810,10 @@ async function iniciar() {
     ajustarRotulos();
     new ResizeObserver(() => mapa.invalidateSize()).observe(cont);
     iniciarFiltros();           // requiere marcadores ya creados
-    window.__M = { mapa, S, F, aplicarFiltros, limpiarFiltros };   // handle de inspeccion (sin estado persistente)
+    iniciarExportacion();
+    window.__M = { mapa, S, F, aplicarFiltros, limpiarFiltros,
+                   construirSVG, construirLibro, filasExportables,
+                   cargarSheetJS, descripcionFiltro, nombreArchivo };   // handle de inspeccion (sin estado persistente)
     } catch (e) { window.__errMontar = e.message + ' @ ' + (e.stack || '').split('\n')[1]; throw e; }
   };
   montar();

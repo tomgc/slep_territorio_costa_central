@@ -30,17 +30,16 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Etiquetas de comuna como texto HTML** (v9): las 4 etiquetas (`ETIQUETAS_COMUNA`) salieron
-   del PNG (`geom_text`) y se posicionan como texto HTML `position:absolute` sobre cada panel
-   (`etiquetas_pct` lon/lat→% vía bbox 3857; `etiquetas_html`), `LABEL_COMUNA_PX`. Ahora son
-   editables/reposicionables en Affinity (verificado: texto extraíble en el PDF). Pines,
-   números, límites siguen en el PNG.
-2. **Exportación a PDF A0 vertical** (v8): `@page` 841×1189 mm + `zoom` (texto vectorial),
-   PNG de mapas a `DPI_A0`=200 (`ESC` derivado; `PIN_RADIO_PX`/`PIN_GAP_PX` escalan con ESC).
-   `chrome_print` → PDF, fuentes incrustadas (pdftools: pagesize A0, gobCL+MuseoSans embedded).
-   PDF (~3 MB) gitignored; HTML versionado.
-2. **Tile sin rótulos + etiquetas de comuna propias** (v7): `CartoDB.PositronNoLabels`; 4
-   etiquetas azul gobCL (`ETIQUETAS_COMUNA`, `COLOR_COMUNA`); zonas de exclusión eliminadas.
-3. **Numeración N→S estricta + nota + índice a alto completo** (v6): 1-97 por latitud pura.
-4. **Pines grandes + anti-colisión 2D garantizada** (v4); **límites BCN** (v3); índice con RBD.
-5. `.gitignore`: ignora `comunas_bcn/` (shp crudo), `panel_*.png`, `scratchpad_afiche/`.
+1. **Mapa web — hito 4: exportación SVG + XLSX** (`docs/assets/mapa.js`): SVG vectorial de la
+   vista vigente (pins plenos/atenuados, fronteras CC y regional, rótulos, leyenda por vista,
+   título con filtro y N, atribución; tiles raster NO incrustados y declarado en el pie);
+   XLSX con SheetJS 0.20.3 LOCAL (`docs/assets/vendor/xlsx.full.min.js`, carga diferida),
+   filas = filtrados incluyendo sin-geo alcanzados, celdas numéricas nativas (locale lo
+   resuelve Excel/Numbers), literales tal cual JSON, hoja `Notas` con criterios. Nombre de
+   archivo = filtro aplicado o fecha. Botones en panel (`iniciarExportacion`).
+2. **Mapa web — hito 3: 7 filtros acumulativos** estilo faceta (opciones sobre el subconjunto
+   que cumple los DEMÁS filtros); `match()` función pura del estado `F`.
+3. **Etiquetas de comuna como texto HTML** (v9 afiche): editables en Affinity; pines,
+   números y límites siguen en el PNG.
+4. **Exportación a PDF A0 vertical** (v8 afiche): texto vectorial, fuentes incrustadas.
+5. **Numeración N→S estricta** (v6); pines grandes + anti-colisión (v4); límites BCN (v3).
