@@ -29,6 +29,7 @@ scratchpad_afiche/
 .Ruserdata
 .vscode/
 .idea/
+.claude/
 .DS_Store
 Thumbs.db
 # Nota: *.Rproj SI se versiona (ancla de here::here()). Solo .Rproj.user/ se ignora.
@@ -75,3 +76,8 @@ _archivo/
 20_insumos/auxiliares/*.pdf
 # Insumo del flujo SIMCE (otro flujo de la cartera; no es insumo del mapa interactivo)
 20_insumos/auxiliares/glosas_simce_consolidado_simce.xlsx
+# Intermedios .rds del mapa interactivo: derivados del historico por estudiante (MRUN).
+# Regenerables por 30_procesamiento/34 y 35. Nunca entran al repo.
+# Los JSON agregados de web/data/ SI se versionan: son producto canonico del pipeline,
+# auditados, sin identificador individual (el MRUN se descarta tras agregar).
+40_salidas/mapa_interactivo/*.rds
