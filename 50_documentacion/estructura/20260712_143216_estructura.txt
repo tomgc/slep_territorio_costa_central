@@ -1,10 +1,9 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-07-12 13:45:26
-Total entradas: 392 (77 carpetas, 315 archivos)
+Fecha: 2026-07-12 14:32:16
+Total entradas: 395 (77 carpetas, 318 archivos)
 
 ## Arbol
 
-```
     00_escanear_proyecto.R  (  3.2K)
     00_run_all.R  (  3.08K)
 [D] 10_utils  (-)
@@ -284,8 +283,9 @@ Total entradas: 392 (77 carpetas, 315 archivos)
 [D] 50_documentacion/activa/decisiones  (-)
     50_documentacion/activa/decisiones/20260625_decision_densidad_marcadores.md  (  1.98K)
     50_documentacion/activa/decisiones/20260626_decision_migracion_github.md  (  4.36K)
-    50_documentacion/activa/decisiones/20260712_decision_alcance_censo2024.md  ( 12.39K)
+    50_documentacion/activa/decisiones/20260712_decision_alcance_censo2024.md  ( 13.85K)
     50_documentacion/activa/decisiones/20260712_decision_exclusion_territorio_insular.md  (  4.31K)
+    50_documentacion/activa/decisiones/20260712_decision_indicador_asistencia_censo2024.md  ( 12.39K)
     50_documentacion/activa/decisiones/20260712_decision_recodificacion_slep_2026.md  (  4.99K)
     50_documentacion/activa/decisiones/diagnostico_migracion_github.R  ( 10.53K)
     50_documentacion/activa/ESTADO.md  (  1.4K)
@@ -335,15 +335,17 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     50_documentacion/andamios/logs/20260628_reorganizacion_scratchpad_faseA_log.md  (  6.73K)
     50_documentacion/andamios/reporte_diagnostico_censo2024.md  ( 14.76K)
     50_documentacion/andamios/reporte_diagnostico_mapa_interactivo.md  ( 13.18K)
+    50_documentacion/andamios/reporte_diagnostico_zonal_censo2024.md  ( 12.03K)
     50_documentacion/andamios/reporte_fase0_escala_unica.md  ( 12.03K)
+    50_documentacion/andamios/reporte_render_manzana_censo2024.md  (  6.57K)
     50_documentacion/andamios/reporte_viabilidad_manzana_censo2024.md  ( 12.93K)
 [D] 50_documentacion/estructura  (-)
-    50_documentacion/estructura/20260712_122424_estructura.md  ( 30.89K)
-    50_documentacion/estructura/20260712_122424_estructura.txt  ( 30.88K)
     50_documentacion/estructura/20260712_133656_estructura.md  ( 31.25K)
     50_documentacion/estructura/20260712_133656_estructura.txt  ( 31.25K)
-    50_documentacion/estructura/estructura_actual.md  ( 31.25K)
-    50_documentacion/estructura/estructura_actual.txt  ( 31.25K)
+    50_documentacion/estructura/20260712_134526_estructura.md  ( 31.65K)
+    50_documentacion/estructura/20260712_134526_estructura.txt  ( 31.64K)
+    50_documentacion/estructura/estructura_actual.md  ( 31.65K)
+    50_documentacion/estructura/estructura_actual.txt  ( 31.64K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)
@@ -397,11 +399,10 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     slep_georreferenciacion.Rproj  (190)
 [D] tests  (-)
 [D] tests/testthat  (-)
-```
 
 ## Conteo por extension
 
-- .md: 61
+- .md: 64
 - .pdf: 61
 - .R: 39
 - .png: 35

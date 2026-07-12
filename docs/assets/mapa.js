@@ -27,6 +27,16 @@ const ETIQUETA_DEP = {
 };
 const COLOR_ATENUADO = '#c9c4bb';
 const COLOR_INSTITUCIONAL = '#0D2E52';  // azul SLEP CC: unico color principal (sesion 9)
+/* ---- Mascara invertida (sesion 12) ----
+   Todo lo que NO es Region de Valparaiso se vela: no es foco de analisis, y
+   dejarlo a plena saturacion competia visualmente con el territorio del estudio.
+   La tecnica es UN polígono: anillo exterior = mundo entero, anillos interiores =
+   los del contorno regional. La regla par-impar del GeoJSON convierte esos
+   anillos interiores en agujeros, y el relleno solo pinta el exterior.
+   Es un solo feature, no un recorte de tiles: costo de render despreciable. */
+const COLOR_MASCARA   = '#EAE6DC';   // color pagina: vela sin ensuciar
+const OPACIDAD_MASCARA = 0.72;       // el fondo de fuera se insinua, no desaparece
+const MUNDO = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
 const HOVER_EXTRA = 4.5;          // crecimiento del pin al hover (mas notorio)
 const HOVER_MS    = 180;          // duracion del tween (suave, no salto)
 const TOLERANCIA_HOVER = 8;       // px extra de area sensible ("close-enough")
@@ -237,6 +247,28 @@ function construirLeyenda() {
     document.getElementById('nota-slep-pendientes').textContent =
       'SLEP con traspaso pendiente: ' +
       pend.map(s => `${s.slep} (${s.anio_traspaso})`).join(' · ') + '.';
+}
+
+/* ---- Mascara invertida: el mundo menos la Region de Valparaiso ----
+   Recolecta TODOS los anillos exteriores del contorno regional (el primer anillo
+   de cada Polygon; los siguientes son huecos del propio poligono y no se tocan)
+   y los cuelga como anillos interiores de un unico poligono cuyo exterior es el
+   mundo. No modifica S.fronteraRegion. */
+function anillosExterioresDe(gj) {
+  const geoms = (gj.features ? gj.features.map(f => f.geometry) : [gj.geometry || gj]);
+  const anillos = [];
+  for (const g of geoms) {
+    if (!g) continue;
+    if (g.type === 'Polygon') anillos.push(g.coordinates[0]);
+    else if (g.type === 'MultiPolygon') g.coordinates.forEach(pg => anillos.push(pg[0]));
+  }
+  return anillos;
+}
+function geojsonMascara(fronteraRegion) {
+  return {
+    type: 'Feature', properties: {},
+    geometry: { type: 'Polygon', coordinates: [MUNDO, ...anillosExterioresDe(fronteraRegion)] }
+  };
 }
 
 /* ---- Pins ---- */
@@ -568,6 +600,9 @@ function construirSVG() {
   // fronteras (región: contexto tenue; Costa Central: protagonista)
   const dRegion = pathDeGeojson(S.fronteraRegion, pt);
   const dCC = pathDeGeojson(S.frontera, pt);
+  // mascara invertida: el SVG debe decir lo MISMO que la pantalla. Un solo path
+  // (mundo + anillos regionales como huecos) con fill-rule evenodd.
+  const dMascara = pathDeGeojson(geojsonMascara(S.fronteraRegion), pt);
 
   // rótulos de comuna: misma regla de visibilidad que la pantalla (z>=9)
   let rotulos = '';
@@ -616,6 +651,7 @@ function construirSVG() {
 <rect x="0" y="${SVG_CAB}" width="${W}" height="${HM}" fill="#F2F1EC"/>
 <clipPath id="clipmapa"><rect x="0" y="${SVG_CAB}" width="${W}" height="${HM}"/></clipPath>
 <g clip-path="url(#clipmapa)">
+<path d="${dMascara}" fill-rule="evenodd" fill="${COLOR_MASCARA}" fill-opacity="${OPACIDAD_MASCARA}" stroke="none"/>
 <path d="${dRegion}" fill="none" stroke="#9aa4ad" stroke-width="1" stroke-opacity="0.6"/>
 <path d="${dCC}" fill="${PAL_SLEP['Costa Central']}" fill-opacity="0.03" stroke="${PAL_SLEP['Costa Central']}" stroke-width="1.8" stroke-opacity="0.8"/>
 ${aten}${plenos}${rotulos}
@@ -724,6 +760,243 @@ function iniciarExportacion() {
 }
 
 /* ---- Arranque ---- */
+/* =============================================================================
+   CAPAS DEL CENSO 2024 (hito 4) — densidad (manzana) y asistencia (zonal).
+   - Mutuamente excluyentes (Ninguna/Densidad/Asistencia).
+   - Coropleta SUTIL: es fondo, los pines mandan. Rampa monocroma azul de baja
+     saturacion (mismo matiz, luminosidad creciente), fillOpacity 0,45. Sin bordes.
+   - Pane 'censo' zIndex 330: DEBAJO de mascara (350), frontera (370) y pines (400).
+   - Carga DIFERIDA (fetch al primer encendido) y CACHEADA (apagar no re-descarga),
+     con indicador visible mientras el fetch esta en vuelo.
+   - Cortes MEDIDOS sobre el dato real (cuantiles; ver log_frontend_capas_censo.md).
+   ============================================================================= */
+const CENSO_URL = { densidad: 'data/censo_manzanas_cc.geojson',
+                    asistencia: 'data/censo_zonal_r5.geojson' };
+// Rampa monocroma azul de BAJA saturacion (matiz fijo, luminosidad decreciente).
+const RAMPA_CENSO = ['#cdd8e4', '#a7bacf', '#7f9cba', '#5980a4', '#33628c'];
+const OPACIDAD_CENSO = 0.45;                 // maximo del relleno: es fondo, no compite
+const GRIS_CENSO_CERO = '#b0aaa0';           // densidad: sin poblacion en edad (fuera de escala)
+const GRIS_CENSO_RUIDOSO = '#9a9488';        // asistencia fiable=FALSE: denominador insuficiente
+const OPACIDAD_CENSO_GRIS = 0.42;
+// Cortes = cuantiles 20/40/60/80 del conteo>0 (densidad) y de la proporcion
+// fiable (asistencia), medidos sobre el artefacto real. NO inventados.
+const CORTES_DENSIDAD = {
+  n_edad_0_5:   [1, 2, 4, 6],
+  n_edad_6_13:  [2, 4, 6, 11],
+  n_edad_14_17: [1, 2, 4, 6]
+};
+const CORTES_ASISTENCIA = {
+  parv:   [0.449, 0.497, 0.533, 0.576],
+  basica: [0.927, 0.943, 0.955, 0.966],
+  media:  [0.825, 0.855, 0.879, 0.907]
+};
+const TRAMOS_DENSIDAD = [
+  { k: 'n_edad_0_5',  et: 'Parvularia (0 a 5 años)' },
+  { k: 'n_edad_6_13', et: 'Básica (6 a 13 años)' },
+  { k: 'n_edad_14_17', et: 'Media (14 a 17 años)' }
+];
+const NIVELES_ASIST = [
+  { k: 'parv', et: 'parvularia', den: 'n_edad_0_5' },
+  { k: 'basica', et: 'básica', den: 'n_edad_6_13' },
+  { k: 'media', et: 'media', den: 'n_edad_14_17' }
+];
+// CUT -> nombre de comuna (codigo unico territorial oficial, Region de Valparaiso).
+const NOMBRE_COMUNA = {
+  '5101': 'Valparaíso', '5102': 'Casablanca', '5103': 'Concón', '5104': 'Juan Fernández',
+  '5105': 'Puchuncaví', '5107': 'Quintero', '5109': 'Viña del Mar', '5201': 'Isla de Pascua',
+  '5301': 'Los Andes', '5302': 'Calle Larga', '5303': 'Rinconada', '5304': 'San Esteban',
+  '5401': 'La Ligua', '5402': 'Cabildo', '5403': 'Papudo', '5404': 'Petorca', '5405': 'Zapallar',
+  '5501': 'Quillota', '5502': 'La Calera', '5503': 'Hijuelas', '5504': 'La Cruz', '5506': 'Nogales',
+  '5601': 'San Antonio', '5602': 'Algarrobo', '5603': 'Cartagena', '5604': 'El Quisco',
+  '5605': 'El Tabo', '5606': 'Santo Domingo', '5701': 'San Felipe', '5702': 'Catemu',
+  '5703': 'Llaillay', '5704': 'Panquehue', '5705': 'Putaendo', '5706': 'Santa María',
+  '5801': 'Quilpué', '5802': 'Limache', '5803': 'Olmué', '5804': 'Villa Alemana'
+};
+function nombreComuna(cut) { return NOMBRE_COMUNA[cut] || `comuna ${cut}`; }
+function clase(v, cortes) { let i = 0; while (i < cortes.length && v > cortes[i]) i++; return i; }
+function rangosConteo(cortes) {
+  const r = []; let lo = 1;
+  for (const c of cortes) { r.push(lo === c ? `${lo}` : `${lo} a ${c}`); lo = c + 1; }
+  r.push(`${lo} o más`); return r;
+}
+function rangosProp(cortes) {
+  const p = cortes.map(c => (c * 100).toLocaleString('es-CL', { maximumFractionDigits: 1 }));
+  const r = [`hasta ${p[0]}%`];
+  for (let i = 1; i < p.length; i++) r.push(`${p[i - 1]} a ${p[i]}%`);
+  r.push(`${p[p.length - 1]}% o más`); return r;
+}
+
+function estiloDensidad(f) {
+  const v = f.properties[S.censo.tramo];
+  if (v === 0) return { stroke: false, fill: true, fillColor: GRIS_CENSO_CERO, fillOpacity: OPACIDAD_CENSO_GRIS };
+  return { stroke: false, fill: true, fillColor: RAMPA_CENSO[clase(v, CORTES_DENSIDAD[S.censo.tramo])], fillOpacity: OPACIDAD_CENSO };
+}
+function estiloAsistencia(f) {
+  const nv = S.censo.nivel;
+  const fi = f.properties['fiable_' + nv];
+  if (fi === true) {
+    const pr = f.properties['proporcion_asistencia_' + nv];
+    return { stroke: false, fill: true, fillColor: RAMPA_CENSO[clase(pr, CORTES_ASISTENCIA[nv])], fillOpacity: OPACIDAD_CENSO };
+  }
+  if (fi === false)  // ruidoso (0 < den < 20): gris solido, fuera de la rampa
+    return { stroke: false, fill: true, fillColor: GRIS_CENSO_RUIDOSO, fillOpacity: OPACIDAD_CENSO_GRIS };
+  // fi === null (den == 0): hueco, solo contorno. Tercer tratamiento, distinto de los dos.
+  return { stroke: true, color: '#b9b3a7', weight: 0.6, opacity: 0.75, fill: false };
+}
+
+function popupDensidad(p) {
+  const fila = (et, v) => `<div>${et}</div><div class="val">${fmt(v)}</div>`;
+  return `<div class="pp pp-censo">
+    <div class="pp-nombre">Manzana <span class="pp-rbd">${p.MANZENT}</span></div>
+    <div class="pp-sub">${nombreComuna(p.CUT)} · Censo 2024</div>
+    <div class="pp-censo-tabla">
+      ${fila('Población 0 a 5 años', p.n_edad_0_5)}
+      ${fila('Población 6 a 13 años', p.n_edad_6_13)}
+      ${fila('Población 14 a 17 años', p.n_edad_14_17)}
+    </div></div>`;
+}
+function popupAsistencia(p) {
+  const nv = NIVELES_ASIST.find(n => n.k === S.censo.nivel);
+  const tipo = p.tipo_unidad === 'urbano' ? 'Zona urbana' : 'Localidad rural';
+  const prop = p['proporcion_asistencia_' + nv.k];
+  const fi = p['fiable_' + nv.k];
+  const den = p[nv.den], num = p['n_asistencia_' + nv.k];
+  let bloqueProp;
+  if (prop == null) {
+    bloqueProp = `<div class="pp-ind-val sin-dato">Sin población en edad para ${nv.et}</div>`;
+  } else {
+    bloqueProp = `<div class="pp-censo-prop-val">${(prop * 100).toLocaleString('es-CL', { maximumFractionDigits: 1 })}%</div>` +
+      (fi === false ? `<div class="pp-censo-aviso">Denominador insuficiente (menos de 20 niños en edad ${nv.et}): la proporción es ruidosa. Los conteos de arriba sí son exactos.</div>` : '');
+  }
+  return `<div class="pp pp-censo">
+    <div class="pp-nombre">${tipo} <span class="pp-rbd">${p.id_unidad}</span></div>
+    <div class="pp-sub">${nombreComuna(p.CUT)} · Censo 2024</div>
+    <div class="pp-censo-tabla">
+      <div>Grupo en edad ${nv.et}</div><div class="val">${fmt(den)}</div>
+      <div>Asisten a ${nv.et}</div><div class="val">${fmt(num)}</div>
+    </div>
+    <div class="pp-censo-prop">
+      <div class="pp-ind-etq">Proporción del grupo en edad oficial que asiste al nivel</div>
+      ${bloqueProp}
+    </div></div>`;
+}
+
+function construirCapaCenso(modo, data) {
+  const esD = modo === 'densidad';
+  return L.geoJSON(data, {
+    pane: 'censo', renderer: S.censo.renderer,
+    style: esD ? estiloDensidad : estiloAsistencia,
+    onEachFeature: (f, capa) => capa.bindPopup(
+      () => (esD ? popupDensidad(f.properties) : popupAsistencia(f.properties)),
+      { maxWidth: 340, autoPanPadding: [30, 30] })
+  });
+}
+
+function indicadorCargaCenso(mostrar) {
+  let el = document.getElementById('censo-cargando');
+  if (mostrar) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'censo-cargando'; el.className = 'censo-cargando';
+      el.textContent = 'Cargando capa del Censo…';
+      document.getElementById('mapa').appendChild(el);
+    }
+  } else if (el) el.remove();
+}
+
+function subselectorCenso() {
+  const cont = document.getElementById('censo-sub');
+  if (!S.censo.modo) { cont.hidden = true; cont.innerHTML = ''; return; }
+  const esD = S.censo.modo === 'densidad';
+  const ops = esD ? TRAMOS_DENSIDAD : NIVELES_ASIST;
+  const sel = esD ? S.censo.tramo : S.censo.nivel;
+  const etq = esD ? 'Tramo de edad' : 'Nivel educativo';
+  cont.hidden = false;
+  cont.innerHTML = `<label for="censo-sub-sel">${etq}</label>
+    <select id="censo-sub-sel">${ops.map(o =>
+      `<option value="${o.k}"${o.k === sel ? ' selected' : ''}>${o.et}</option>`).join('')}</select>`;
+  document.getElementById('censo-sub-sel').addEventListener('change', e => {
+    if (esD) S.censo.tramo = e.target.value; else S.censo.nivel = e.target.value;
+    // re-estilar sin re-descargar: se reconstruye la capa desde el cache
+    if (S.censo.capa) S.mapa.removeLayer(S.censo.capa);
+    S.censo.capa = construirCapaCenso(S.censo.modo, S.censo.cache[S.censo.modo]).addTo(S.mapa);
+    leyendaCenso();
+  });
+}
+
+function leyendaCenso() {
+  const el = document.getElementById('censo-leyenda');
+  const nota = document.getElementById('censo-nota');
+  const cuadro = (color, op, etq, hueco) =>
+    `<div class="leyenda-item"><span class="ly-cuadro${hueco ? ' hueco' : ''}"${hueco ? '' :
+      ` style="background:${color};opacity:${op}"`}></span>${etq}</div>`;
+  if (!S.censo.modo) { el.innerHTML = ''; nota.textContent = ''; return; }
+  if (S.censo.modo === 'densidad') {
+    const rangos = rangosConteo(CORTES_DENSIDAD[S.censo.tramo]);
+    let h = '<div class="leyenda-grupo">Niños por manzana</div>';
+    rangos.forEach((r, i) => { h += cuadro(RAMPA_CENSO[i], OPACIDAD_CENSO, r); });
+    h += cuadro(GRIS_CENSO_CERO, OPACIDAD_CENSO_GRIS, 'Sin población en edad');
+    el.innerHTML = h;
+    nota.textContent = 'Densidad de población en edad escolar (Censo 2024), solo Costa Central. El cero es dato real (paños sin residentes en el tramo), no ausencia.';
+  } else {
+    const nv = NIVELES_ASIST.find(n => n.k === S.censo.nivel);
+    const rangos = rangosProp(CORTES_ASISTENCIA[nv.k]);
+    let h = '<div class="leyenda-grupo">Proporción que asiste a ' + nv.et + '</div>';
+    rangos.forEach((r, i) => { h += cuadro(RAMPA_CENSO[i], OPACIDAD_CENSO, r); });
+    h += cuadro(GRIS_CENSO_RUIDOSO, OPACIDAD_CENSO_GRIS, 'Denominador insuficiente (menos de 20 niños)');
+    h += cuadro(null, 0, 'Sin población en edad para el nivel', true);
+    el.innerHTML = h;
+    nota.textContent = 'Proporción del grupo en edad oficial que asiste al nivel (Censo 2024), región continental. No es la tasa neta del INE; el popup de una unidad no muestra la cifra comunal.';
+  }
+}
+
+async function activarCenso(modo) {
+  modo = modo || null;
+  const previo = S.censo.modo;
+  if (modo === previo) return;
+  // quitar la capa vigente
+  if (S.censo.capa) { S.mapa.removeLayer(S.censo.capa); S.censo.capa = null; }
+  S.censo.modo = modo;
+  document.querySelectorAll('.censo-opt').forEach(b => {
+    const on = (b.dataset.modo || '') === (modo || '');
+    b.classList.toggle('activo', on); b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+  subselectorCenso();
+  leyendaCenso();
+
+  if (!modo) {                                  // Ninguna: si veniamos de densidad, volver al defecto
+    if (previo === 'densidad') S.mapa.fitBounds(S.boundsDefecto, { animate: true });
+    return;
+  }
+  // carga diferida + cache
+  let data = S.censo.cache[modo];
+  if (!data) {
+    indicadorCargaCenso(true);
+    try { data = await fetch(CENSO_URL[modo]).then(r => r.json()); S.censo.cache[modo] = data; }
+    catch (e) { indicadorCargaCenso(false); document.getElementById('censo-nota').textContent =
+      'No se pudo cargar la capa del Censo.'; S.censo.modo = previo; return; }
+    indicadorCargaCenso(false);
+  }
+  // si el usuario cambio de capa mientras cargaba, no montar la obsoleta
+  if (S.censo.modo !== modo) return;
+  S.censo.capa = construirCapaCenso(modo, data).addTo(S.mapa);
+  // encuadre: densidad enfoca Costa Central (solo la cubre); asistencia es regional
+  // y vuelve al encuadre por defecto; salir de densidad tambien vuelve al defecto.
+  if (modo === 'densidad') {
+    S.mapa.fitBounds(S.censo.capa.getBounds().pad(0.05), { maxZoom: ZOOM_MAX_ENCUADRE, animate: true });
+  } else if (previo === 'densidad') {
+    S.mapa.fitBounds(S.boundsDefecto, { animate: true });
+  }
+}
+
+function iniciarCenso() {
+  S.censo = { modo: null, tramo: 'n_edad_6_13', nivel: 'basica',
+              cache: {}, capa: null, renderer: L.canvas({ pane: 'censo' }) };
+  document.querySelectorAll('.censo-opt').forEach(b =>
+    b.addEventListener('click', () => activarCenso(b.dataset.modo)));
+  leyendaCenso();
+}
+
 async function iniciar() {
   const [geo, meta, frontera, fronteraRegion, rotulosComuna] = await Promise.all([
     fetch('data/establecimientos.geojson').then(r => r.json()),
@@ -758,6 +1031,16 @@ async function iniciar() {
     // pane de rotulos BAJO los pins (overlayPane=400): los pins nunca quedan tapados
     mapa.createPane('rotulos');
     mapa.getPane('rotulos').style.zIndex = 340;
+    // mascara SOBRE el tile y sus rotulos (340), BAJO la frontera (370) y los
+    // pins (400): vela el fuera de region sin velar lo que dibujamos nosotros.
+    // pane de la coropleta del Censo: DEBAJO de la mascara (350), la frontera (370)
+    // y los pines (400). Es fondo: nunca tapa un pin. Sin eventos propios (los popups
+    // los liga L.geoJSON con su propio manejo; el pane solo ordena el z).
+    mapa.createPane('censo');
+    mapa.getPane('censo').style.zIndex = 330;
+    mapa.createPane('mascara');
+    mapa.getPane('mascara').style.zIndex = 350;
+    mapa.getPane('mascara').style.pointerEvents = 'none';
     // frontera bajo los pins, sobre los rotulos
     mapa.createPane('frontera');
     mapa.getPane('frontera').style.zIndex = 370;
@@ -767,6 +1050,16 @@ async function iniciar() {
     }).addTo(mapa);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd', maxZoom: 19, pane: 'rotulos', opacity: 0.9
+    }).addTo(mapa);
+
+    // Mascara invertida: vela todo lo que NO es Region de Valparaiso. Va ANTES
+    // de las fronteras (mismo orden que el zIndex de los panes). Renderer SVG
+    // explicito: el mapa corre en preferCanvas, y la regla de anillos-como-huecos
+    // es nativa en SVG (fill-rule) sin depender del path de Canvas.
+    L.geoJSON(geojsonMascara(fronteraRegion), {
+      pane: 'mascara', renderer: L.svg(),
+      style: { stroke: false, fillColor: COLOR_MASCARA, fillOpacity: OPACIDAD_MASCARA },
+      interactive: false
     }).addTo(mapa);
 
     // frontera regional (contexto): solo linea, apenas insinuada, bajo la de CC
@@ -822,6 +1115,7 @@ async function iniciar() {
     ajustarRotulos();
     new ResizeObserver(() => mapa.invalidateSize()).observe(cont);
     iniciarFiltros();           // requiere marcadores ya creados
+    iniciarCenso();             // capas del Censo (carga diferida)
     iniciarExportacion();
     window.__M = { mapa, S, F, aplicarFiltros, limpiarFiltros,
                    construirSVG, construirLibro, filasExportables,

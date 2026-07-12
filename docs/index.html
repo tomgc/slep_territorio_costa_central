@@ -13,43 +13,57 @@
   <div class="cabecera-sep"></div>
   <div class="cabecera-titulos">
     <h1>Mapa de establecimientos educacionales</h1>
-    <p class="bajada">Región de Valparaíso · dependencia vigente 2026 · <span id="contador">— de —</span> establecimientos</p>
+    <p class="bajada">Región de Valparaíso · <span id="contador">— de —</span> establecimientos</p>
   </div>
 </header>
+
+<!-- Barra de filtros (sesion 12): sale del panel lateral a una fila horizontal.
+     Provincia queda OCULTO (hidden), no eliminado: el sistema de facetas lo
+     sigue reconstruyendo y F.prov permanece en null ("Todas"), sin interrumpir
+     la cascada de opciones dependientes. -->
+<section class="barra-filtros" id="bloque-filtros" aria-label="Filtros del mapa">
+  <div class="filtro" id="f-prov-wrap" hidden><label for="f-prov">Provincia</label><select id="f-prov"></select></div>
+  <div class="filtro"><label for="f-com">Comuna</label><select id="f-com"></select></div>
+  <div class="filtro"><label for="f-dep">Dependencia</label><select id="f-dep"></select></div>
+  <div class="filtro"><label for="f-slep">SLEP</label><select id="f-slep"></select></div>
+  <div class="filtro"><label for="f-tipo">Tipo de enseñanza</label><select id="f-tipo"></select></div>
+  <div class="filtro" id="f-nivel-wrap" hidden><label for="f-nivel">Nivel</label><select id="f-nivel"></select></div>
+  <div class="filtro filtro-ee"><label for="f-ee">Nombre del establecimiento</label>
+    <div class="combobox">
+      <input id="f-ee" type="text" placeholder="Busca por nombre o RBD" autocomplete="off">
+      <div id="f-ee-lista" class="combobox-lista" hidden></div>
+    </div>
+    <div id="f-ee-sel" class="combobox-sel" hidden></div>
+  </div>
+  <div class="filtro filtro-accion">
+    <button id="f-limpiar" class="boton-limpiar-icono" type="button"
+            title="Limpiar filtros" aria-label="Limpiar filtros">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M3 2v6h6"></path>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L3 8"></path>
+      </svg>
+    </button>
+  </div>
+</section>
 
 <div class="cuerpo">
   <aside class="panel-lateral" id="panel-lateral">
     <section class="bloque">
-      <h2>Interactivo</h2>
+      <h2>Mapa interactivo</h2>
       <p class="nota-suave">Pasa el cursor sobre un pin para identificarlo; haz clic para ver su matrícula actual e histórica.</p>
     </section>
 
-    <section class="bloque" id="bloque-filtros">
-      <h2>Filtros</h2>
-      <div class="filtro"><label for="f-prov">Provincia</label><select id="f-prov"></select></div>
-      <div class="filtro"><label for="f-com">Comuna</label><select id="f-com"></select></div>
-      <div class="filtro"><label for="f-dep">Dependencia</label><select id="f-dep"></select></div>
-      <div class="filtro"><label for="f-slep">Servicio Local de Educación</label><select id="f-slep"></select></div>
-      <div class="filtro"><label for="f-ee">Establecimiento</label>
-        <div class="combobox">
-          <input id="f-ee" type="text" placeholder="Busca por nombre o RBD" autocomplete="off">
-          <div id="f-ee-lista" class="combobox-lista" hidden></div>
-        </div>
-        <div id="f-ee-sel" class="combobox-sel" hidden></div>
+    <section class="bloque" id="bloque-censo">
+      <h2>Capas del Censo</h2>
+      <div class="censo-selector" role="radiogroup" aria-label="Capa del Censo 2024">
+        <button type="button" class="censo-opt activo" data-modo="" role="radio" aria-checked="true">Ninguna</button>
+        <button type="button" class="censo-opt" data-modo="densidad" role="radio" aria-checked="false">Densidad</button>
+        <button type="button" class="censo-opt" data-modo="asistencia" role="radio" aria-checked="false">Asistencia</button>
       </div>
-      <div class="filtro"><label for="f-tipo">Tipo de enseñanza</label><select id="f-tipo"></select></div>
-      <div class="filtro" id="f-nivel-wrap" hidden><label for="f-nivel">Nivel</label><select id="f-nivel"></select></div>
-      <button id="f-limpiar" class="boton-limpiar" type="button">Limpiar filtros</button>
-    </section>
-
-    <section class="bloque" id="bloque-exportar">
-      <h2>Exportar</h2>
-      <button id="btn-svg" class="boton-exportar" type="button">Descargar mapa (SVG)</button>
-      <button id="btn-xlsx" class="boton-exportar" type="button">Descargar datos (XLSX)</button>
-      <p class="nota-suave">El SVG captura la vista visible con los filtros aplicados
-        (pins, fronteras y rótulos vectoriales; sin el fondo cartográfico, que es
-        imagen raster de CARTO). El XLSX incluye los datos según los filtros activos,
-        con los establecimientos sin coordenadas cuando el filtro los alcanza.</p>
+      <div class="censo-sub" id="censo-sub" hidden></div>
+      <div id="censo-leyenda" class="leyenda"></div>
+      <p class="censo-nota" id="censo-nota"></p>
     </section>
 
     <section class="bloque">
@@ -57,16 +71,29 @@
       <div id="leyenda" class="leyenda"></div>
       <p class="nota-suave" id="nota-slep-pendientes"></p>
     </section>
+
+    <section class="bloque" id="bloque-exportar">
+      <h2>Exportar</h2>
+      <div class="fila-exportar">
+        <button id="btn-svg" class="boton-exportar" type="button">Mapa (SVG)</button>
+        <button id="btn-xlsx" class="boton-exportar" type="button">Datos (XLSX)</button>
+      </div>
+      <p class="nota-suave">El SVG captura la vista visible con los filtros aplicados
+        (pins, fronteras y rótulos vectoriales, sin el fondo cartográfico). El XLSX
+        incluye los datos según los filtros activos.</p>
+    </section>
+
+    <section class="bloque bloque-atribucion">
+      <p class="atribucion">Elaborado por el Área de Monitoreo a partir de datos del Centro
+        de Estudios MINEDUC (Directorio Oficial y Matrícula por estudiante 2016–2025),
+        listado oficial de SLEP 2026 y tiles CARTO Positron · La dependencia refleja la
+        situación institucional vigente a 2026.</p>
+    </section>
   </aside>
 
   <main id="mapa" role="application" aria-label="Mapa de establecimientos"></main>
 </div>
 
-<footer class="pie">
-  Elaborado por el Área de Monitoreo a partir de datos del Centro de Estudios MINEDUC
-  (Directorio Oficial y Matrícula por estudiante 2016–2025), listado oficial de SLEP 2026 y
-  tiles CARTO Positron · La dependencia refleja la situación institucional vigente a 2026.
-</footer>
 
 <script src="assets/vendor/leaflet.js"></script>
 <script src="assets/mapa.js"></script>

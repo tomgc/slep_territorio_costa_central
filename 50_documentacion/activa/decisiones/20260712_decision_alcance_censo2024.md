@@ -10,6 +10,35 @@ artefacto real, no de la documentación del INE.
 
 ---
 
+> ## ⚠️ SUPERSEDIDA PARCIALMENTE — leer antes de usar este documento
+>
+> **Sesión 11 (2026-07-12).** La medición del Hito 2a
+> (`50_documentacion/andamios/reporte_diagnostico_zonal_censo2024.md`) desmintió el
+> indicador especificado aquí para la capa de asistencia.
+>
+> **Quedan SUPERSEDIDOS por
+> `20260712_decision_indicador_asistencia_censo2024.md`:**
+>
+> - **§3** (el indicador de la capa de asistencia): **no** es la "tasa de asistencia
+>   neta" del INE. Ese indicador **no es reconstruible** a escala sub-comunal desde
+>   estos datos. Lo que se publica es la **proporción del grupo en edad oficial que
+>   asiste al nivel**, que subestima la tasa neta del INE entre 0,53 y 1,35 pp
+>   (medido, las 12 celdas del mismo lado).
+> - **§6** (validación obligatoria): la convergencia con la hoja 8 **ya no es criterio
+>   de éxito del producto**. Se conserva únicamente como **test de integridad de
+>   lectura del parquet** (`TOL_LECTURA_PARQUET = 0,75 pp`).
+> - **§10** (criterio de éxito), puntos **1** y **3**: reemplazados.
+>
+> **SIGUE PLENAMENTE VIGENTE** todo el resto: dos capas / dos indicadores / dos
+> escalas; la densidad a nivel manzana acotada a Costa Central; el tratamiento del
+> cero como dato real; la gobernanza del microdato; las restricciones técnicas de §9.
+>
+> Este documento **no se edita**: se conserva como registro de lo que se sabía en la
+> Etapa 1b. El cambio de diseño lo produjo una medición, y esa trazabilidad es el
+> aprendizaje.
+
+---
+
 ## 1. Qué se decide
 
 Incorporar el Censo de Población y Vivienda 2024 (INE) al mapa interactivo

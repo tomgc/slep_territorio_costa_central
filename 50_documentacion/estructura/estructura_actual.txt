@@ -1,11 +1,11 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-07-12 13:45:26
-Total entradas: 392 (77 carpetas, 315 archivos)
+Fecha: 2026-07-12 16:53:44
+Total entradas: 398 (77 carpetas, 321 archivos)
 
 ## Arbol
 
     00_escanear_proyecto.R  (  3.2K)
-    00_run_all.R  (  3.08K)
+    00_run_all.R  (  3.21K)
 [D] 10_utils  (-)
     10_utils/10_configuracion.R  (  3.41K)
     10_utils/10_utils.R  (  1.35K)
@@ -197,6 +197,7 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     30_procesamiento/34_preparar_directorio_region.R  ( 16.79K)
     30_procesamiento/35_agregar_matricula_historica.R  (  8.45K)
     30_procesamiento/36_construir_geojson_web.R  ( 18.36K)
+    30_procesamiento/37_construir_capa_manzana.R  (  8.49K)
 [D] 40_salidas  (-)
 [D] 40_salidas/afiche  (-)
     40_salidas/afiche/afiche_boceto_final.png  (405.81K)
@@ -283,11 +284,12 @@ Total entradas: 392 (77 carpetas, 315 archivos)
 [D] 50_documentacion/activa/decisiones  (-)
     50_documentacion/activa/decisiones/20260625_decision_densidad_marcadores.md  (  1.98K)
     50_documentacion/activa/decisiones/20260626_decision_migracion_github.md  (  4.36K)
-    50_documentacion/activa/decisiones/20260712_decision_alcance_censo2024.md  ( 12.39K)
+    50_documentacion/activa/decisiones/20260712_decision_alcance_censo2024.md  ( 13.85K)
     50_documentacion/activa/decisiones/20260712_decision_exclusion_territorio_insular.md  (  4.31K)
+    50_documentacion/activa/decisiones/20260712_decision_indicador_asistencia_censo2024.md  ( 12.39K)
     50_documentacion/activa/decisiones/20260712_decision_recodificacion_slep_2026.md  (  4.99K)
     50_documentacion/activa/decisiones/diagnostico_migracion_github.R  ( 10.53K)
-    50_documentacion/activa/ESTADO.md  (  1.4K)
+    50_documentacion/activa/ESTADO.md  (  1.39K)
     50_documentacion/activa/POLITICA_PROYECTO.md  ( 34.61K)
     50_documentacion/activa/SETTINGS_Y_PROMPTS_OPERACIONALES.md  ( 57.28K)
 [D] 50_documentacion/andamios  (-)
@@ -334,15 +336,17 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     50_documentacion/andamios/logs/20260628_reorganizacion_scratchpad_faseA_log.md  (  6.73K)
     50_documentacion/andamios/reporte_diagnostico_censo2024.md  ( 14.76K)
     50_documentacion/andamios/reporte_diagnostico_mapa_interactivo.md  ( 13.18K)
+    50_documentacion/andamios/reporte_diagnostico_zonal_censo2024.md  ( 12.03K)
     50_documentacion/andamios/reporte_fase0_escala_unica.md  ( 12.03K)
+    50_documentacion/andamios/reporte_render_manzana_censo2024.md  (  6.57K)
     50_documentacion/andamios/reporte_viabilidad_manzana_censo2024.md  ( 12.93K)
 [D] 50_documentacion/estructura  (-)
-    50_documentacion/estructura/20260712_122424_estructura.md  ( 30.89K)
-    50_documentacion/estructura/20260712_122424_estructura.txt  ( 30.88K)
-    50_documentacion/estructura/20260712_133656_estructura.md  ( 31.25K)
-    50_documentacion/estructura/20260712_133656_estructura.txt  ( 31.25K)
-    50_documentacion/estructura/estructura_actual.md  ( 31.25K)
-    50_documentacion/estructura/estructura_actual.txt  ( 31.25K)
+    50_documentacion/estructura/20260712_134526_estructura.md  ( 31.65K)
+    50_documentacion/estructura/20260712_134526_estructura.txt  ( 31.64K)
+    50_documentacion/estructura/20260712_143216_estructura.md  ( 31.9K)
+    50_documentacion/estructura/20260712_143216_estructura.txt  ( 31.89K)
+    50_documentacion/estructura/estructura_actual.md  ( 31.9K)
+    50_documentacion/estructura/estructura_actual.txt  ( 31.89K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)
@@ -354,6 +358,7 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     50_documentacion/traspasos/traspaso_cierre_v08.md  ( 28.02K)
     50_documentacion/traspasos/traspaso_cierre_v09.md  ( 39.19K)
     50_documentacion/traspasos/traspaso_cierre_v10.md  ( 36.57K)
+    50_documentacion/traspasos/traspaso_cierre_v11.md  ( 45.9K)
     CLAUDE.md  (  2.92K)
 [D] design_handoff_mapa_establecimientos  (-)
 [D] design_handoff_mapa_establecimientos/assets  (-)
@@ -384,6 +389,7 @@ Total entradas: 392 (77 carpetas, 315 archivos)
     docs/assets/vendor/leaflet.js  (144.09K)
     docs/assets/vendor/xlsx.full.min.js  (929.59K)
 [D] docs/data  (-)
+    docs/data/censo_manzanas_cc.geojson  (  2.78M)
     docs/data/comunas_rotulos.json  (  1.68K)
     docs/data/establecimientos.geojson  (710.04K)
     docs/data/frontera_costa_central.geojson  ( 21.1K)
@@ -399,15 +405,15 @@ Total entradas: 392 (77 carpetas, 315 archivos)
 
 ## Conteo por extension
 
-- .md: 61
+- .md: 65
 - .pdf: 61
-- .R: 39
+- .R: 40
 - .png: 35
 - .csv: 29
 - .xlsx: 28
 - .otf: 11
 - .CSV: 9
-- .geojson: 5
+- .geojson: 6
 - .html: 5
 - .json: 5
 - .rds: 4

@@ -3,6 +3,10 @@
    (sesion 9: el azul #0D2E52 del SLEP Costa Central reemplaza al color del
    afiche impreso como UNICO color principal del chrome), tipografias gobCL
    (titulos) y Museo Sans (texto). Hito 2b: tipografia mayor, panel con aire.
+   Sesion 12: los filtros salen del panel lateral a una barra horizontal de UNA
+   fila bajo la cabecera; el panel queda como zona de LECTURA (ayuda, leyenda,
+   exportacion), no de control. Provincia se oculta. El boton "Limpiar filtros"
+   pasa a icono.
    ============================================================================= */
 
 @font-face { font-family: 'gobCL'; src: url('fonts/gobCL_Heavy.otf') format('opentype'); font-weight: 900; font-display: swap; }
@@ -29,9 +33,12 @@ body {
 }
 
 /* ---- cabecera ---- */
+/* Sin borde inferior: la cabecera y la barra de filtros son un solo bloque de
+   chrome sobre el mismo papel; la linea que los separaba los alejaba sin
+   aportar. El unico borde es el azul que cierra ese bloque contra el mapa. */
 .cabecera {
-  background: var(--papel); border-bottom: 2px solid var(--azul-institucional);
-  display: flex; align-items: center; gap: 22px; padding: 12px 26px; flex: none;
+  background: var(--papel);
+  display: flex; align-items: center; gap: 22px; padding: 12px 26px 6px; flex: none;
 }
 .logo { height: 96px; width: auto; display: block; }
 .cabecera-sep { width: 1px; height: 72px; background: var(--linea2); }
@@ -42,10 +49,54 @@ body {
 .bajada { font-size: 14px; color: var(--bajada); margin-top: 3px; }
 #contador { font-weight: 500; color: var(--azul-institucional); }
 
+/* ---- barra de filtros (sesion 12) ----
+   Flex, no grid: el grid impone columnas de igual ancho; el flex deja que cada
+   <select> se dimensione por su opcion mas larga (width:auto), que es el
+   requisito. El combobox de establecimiento es la excepcion: no se dimensiona
+   por contenido (los nombres del MINEDUC pasan los 70 caracteres), absorbe el
+   espacio sobrante con flex:1.
+   Sin overflow declarado: el desplegable del combobox debe salir de la barra y
+   flotar sobre el mapa. El borde azul inferior cierra el bloque de chrome
+   (cabecera + filtros) contra el mapa, rol que antes cumplia la cabecera. */
+.barra-filtros {
+  flex: none; background: var(--papel);
+  border-bottom: 2px solid var(--azul-institucional);
+  padding: 0 26px 12px;
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px;
+}
+.barra-filtros .filtro { margin-bottom: 0; flex: 0 0 auto; min-width: 0; }
+/* Los select nativos se dimensionan por su opcion mas larga; el max-width evita
+   que una etiqueta patologica (una comuna de nombre muy largo) rompa la fila. */
+.barra-filtros .filtro select { width: auto; max-width: 260px; }
+/* Establecimiento: la excepcion (no se dimensiona por contenido). Toma el
+   sobrante con flex:1, y por eso SE ENCOGE SOLO cuando el selector de Nivel
+   entra al flujo: Nivel toma su ancho por contenido y el resto es del combobox.
+   El min-width es el piso de legibilidad, no un ancho objetivo. */
+.barra-filtros .filtro-ee { flex: 1 1 200px; min-width: 170px; }
+.barra-filtros .filtro-ee .combobox input { width: 100%; }
+/* El icono de limpiar se empuja al extremo derecho y se alinea con la base de
+   los controles (no de las etiquetas). */
+.filtro-accion { margin-left: auto; display: flex; align-items: flex-end; }
+
+/* Boton de limpiar como icono (antes: texto, ~130px; ahora: 34px cuadrado).
+   Deliberadamente SUTIL: mismo borde que los <select> (1px, --linea2) y flecha
+   del mismo gris que las etiquetas (--bajada). No compite con los controles: es
+   un accesorio, no una accion primaria. El nombre accesible vive en
+   aria-label/title del HTML, no en el pixel. */
+.boton-limpiar-icono {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0; cursor: pointer;
+  color: var(--bajada); background: var(--papel);
+  border: 1px solid var(--linea2); border-radius: 7px;
+}
+.boton-limpiar-icono:hover { background: #F7F4EC; color: var(--azul-institucional);
+  border-color: var(--azul-institucional); }
+.boton-limpiar-icono:focus-visible { outline: 2px solid #5E8AB4; outline-offset: 1px; }
+
 /* ---- cuerpo: panel + mapa ---- */
 .cuerpo { flex: 1; display: flex; min-height: 0; }
 .panel-lateral {
-  width: 330px; flex: none; background: var(--papel);
+  width: 270px; flex: none; background: var(--papel);
   border-right: 1px solid var(--linea1); overflow-y: auto; padding: 20px 20px;
 }
 .bloque { margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--linea2); }
@@ -106,19 +157,13 @@ body {
 .pp-spark-titulo { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
 .pp-nota { font-size: 12.5px; color: var(--muted); margin-top: 9px; line-height: 1.45; }
 
-/* ---- pie ---- */
-.pie {
-  flex: none; background: var(--papel); border-top: 1px solid var(--linea2);
-  font-size: 11px; color: var(--muted); padding: 7px 26px; line-height: 1.45;
-}
-
-/* ---- responsive ---- */
-@media (max-width: 860px) {
-  .cuerpo { flex-direction: column; }
-  .panel-lateral { width: 100%; max-height: 38vh; border-right: none;
-    border-bottom: 1px solid var(--linea1); }
-  .cabecera-titulos h1 { font-size: 17px; }
-  .logo { height: 56px; }
+/* ---- atribucion (sesion 12) ----
+   Antes vivia en un <footer> de ancho completo bajo el mapa. Movida al pie del
+   panel lateral: el footer se eliminó y su banda vertical (~30px) pasó al mapa.
+   Tipografia menor que la nota-suave: es credito, no contenido. */
+.bloque-atribucion { margin-top: 4px; }
+.atribucion {
+  font-size: 10.5px; color: var(--muted); line-height: 1.5;
 }
 
 /* ---- linea de ensenanza (tooltip y tarjeta, hito 2d) ---- */
@@ -143,7 +188,8 @@ body {
 
 /* ---- filtros (hito 3) ---- */
 .filtro { margin-bottom: 12px; }
-.filtro label { display: block; font-size: 12px; color: var(--bajada); margin-bottom: 4px; }
+.filtro label { display: block; font-size: 12px; color: var(--bajada); margin-bottom: 4px;
+  white-space: nowrap; }
 .filtro select, .combobox input {
   width: 100%; font-family: 'Museo Sans', sans-serif; font-weight: 300;
   font-size: 13.5px; color: var(--tinta); background: var(--papel);
@@ -153,24 +199,33 @@ body {
    el #7FA3C7 propuesto daba 2,64:1 y se oscurecio un paso */
 .filtro select:focus, .combobox input:focus { outline: 2px solid #5E8AB4; outline-offset: 0; }
 .combobox { position: relative; }
+/* z-index por encima del chrome de Leaflet (controles = 1000, popups = 700):
+   el desplegable nace en la barra de filtros y cae sobre el mapa. */
 .combobox-lista {
   position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 1200;
   background: var(--papel); border: 1px solid var(--linea2); border-radius: 8px;
   box-shadow: 0 6px 18px rgba(0,0,0,.14); max-height: 300px; overflow-y: auto;
+  min-width: 320px;
 }
 .combobox-item { padding: 7px 10px; font-size: 13px; cursor: pointer; line-height: 1.35; }
 .combobox-item:hover, .combobox-item.activo { background: #F3EEE4; }
 .combobox-item .cb-rbd { color: var(--muted); font-size: 11.5px; }
 .combobox-vacio, .combobox-mas { padding: 7px 10px; font-size: 12px; color: var(--muted); font-style: italic; }
+/* El chip del EE seleccionado flota bajo el input (position:absolute): si
+   ocupara flujo, empujaria la barra a dos filas al elegir un establecimiento. */
 .combobox-sel {
-  margin-top: 6px; display: flex; align-items: center; gap: 8px;
+  position: absolute; left: 0; top: calc(100% + 5px); z-index: 1100;
+  margin-top: 0; display: flex; align-items: center; gap: 8px;
   background: #EFE9DD; border: 1px solid var(--linea2); border-radius: 7px;
   padding: 6px 10px; font-size: 12.5px; color: var(--tinta-media);
+  white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.10);
 }
+.filtro-ee { position: relative; }
 .combobox-sel button {
   margin-left: auto; border: none; background: none; cursor: pointer;
   font-size: 15px; color: var(--bajada); line-height: 1;
 }
+/* El boton de texto sobrevive: lo usa el mensaje de cero resultados. */
 .boton-limpiar {
   width: 100%; margin-top: 4px; padding: 9px 10px; cursor: pointer;
   font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 12.5px;
@@ -180,16 +235,85 @@ body {
 .boton-limpiar:hover { background: #EEF2F7; }
 select option:disabled { color: #b9b3a7; }
 
-/* ---- exportacion (hito 4) ---- */
+/* ---- exportacion (hito 4) ----
+   Los dos botones comparten fila y reparten el ancho del panel (flex:1 cada
+   uno): con el panel angosto, dos botones apilados a ancho completo eran una
+   pared azul. min-width:0 permite que se encojan por debajo de su contenido
+   intrinseco sin desbordar. */
+.fila-exportar { display: flex; gap: 8px; margin-bottom: 8px; }
+.fila-exportar .boton-exportar { flex: 1 1 0; min-width: 0; margin-bottom: 0; }
+/* Sin negrita: gobCL solo tiene Heavy (900) en peso alto, asi que el texto no
+   negrita va en Museo Sans 500, que es la fuente de texto del producto y rinde
+   mejor en blanco sobre azul a 12,5px. */
 .boton-exportar {
-  width: 100%; margin-bottom: 8px; padding: 9px 10px; cursor: pointer;
-  font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 12.5px;
+  width: 100%; margin-bottom: 8px; padding: 9px 8px; cursor: pointer;
+  font-family: 'Museo Sans', sans-serif; font-weight: 500; font-size: 12.5px;
   color: #fff; background: var(--azul-institucional);
   border: 1.5px solid var(--azul-institucional); border-radius: 8px;
+  white-space: nowrap;
 }
 .boton-exportar:hover { background: #1A4576; }
 .boton-exportar:disabled { opacity: .55; cursor: wait; }
 #bloque-exportar .nota-suave { margin-top: 4px; }
+
+/* ---- Capas del Censo (hito 4) ----
+   Bloque propio en el panel, ARRIBA de la leyenda. Selector de 3 estados
+   (Ninguna/Densidad/Asistencia): mutuamente excluyentes. Sub-selector de
+   tramo/nivel dentro de la capa. La coropleta es FONDO: los pines mandan. */
+.censo-selector { display: flex; gap: 0; margin-bottom: 12px;
+  border: 1px solid var(--linea2); border-radius: 8px; overflow: hidden; }
+.censo-opt {
+  flex: 1 1 0; min-width: 0; padding: 8px 4px; cursor: pointer;
+  font-family: 'Museo Sans', sans-serif; font-weight: 500; font-size: 12px;
+  color: var(--bajada); background: var(--papel); border: none;
+  border-left: 1px solid var(--linea2); white-space: nowrap;
+}
+.censo-opt:first-child { border-left: none; }
+.censo-opt:hover { background: #F7F4EC; }
+.censo-opt.activo { background: var(--azul-institucional); color: #fff; }
+.censo-opt:focus-visible { outline: 2px solid #5E8AB4; outline-offset: -2px; }
+.censo-sub { margin-bottom: 12px; }
+.censo-sub label { display: block; font-size: 12px; color: var(--bajada); margin-bottom: 4px; }
+.censo-sub select {
+  width: 100%; font-family: 'Museo Sans', sans-serif; font-weight: 300; font-size: 13.5px;
+  color: var(--tinta); background: var(--papel);
+  border: 1px solid var(--linea2); border-radius: 7px; padding: 7px 9px;
+}
+.censo-sub select:focus { outline: 2px solid #5E8AB4; outline-offset: 0; }
+/* Leyenda de coropleta: cuadros (no puntos, que son de los pines). El hueco
+   (sin poblacion en edad, den==0) se dibuja como recuadro vacio con borde. */
+.ly-cuadro { width: 14px; height: 14px; border-radius: 3px; flex: none;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); }
+.ly-cuadro.hueco { background: transparent !important;
+  box-shadow: inset 0 0 0 1px var(--atenuado); }
+.censo-nota { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
+
+/* Indicador de carga de las capas del Censo (426/421 KB en vuelo != pantalla congelada) */
+.censo-cargando {
+  position: absolute; z-index: 950; left: 50%; top: 16px; transform: translateX(-50%);
+  background: var(--papel); border: 1px solid var(--linea2); border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.16); padding: 8px 16px 8px 14px;
+  display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--tinta-media);
+}
+.censo-cargando::before {
+  content: ''; width: 14px; height: 14px; border-radius: 50%; flex: none;
+  border: 2px solid var(--linea2); border-top-color: var(--azul-institucional);
+  animation: censo-spin 0.7s linear infinite;
+}
+@keyframes censo-spin { to { transform: rotate(360deg); } }
+
+/* Popup de una unidad del Censo (distinto del popup de establecimiento) */
+.pp-censo { width: 300px; }
+.pp-censo .pp-nombre { font-size: 16px; }
+.pp-censo-tabla { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px;
+  margin-top: 10px; font-size: 13px; color: var(--tinta-media); }
+.pp-censo-tabla .val { font-weight: 500; text-align: right; color: var(--tinta); }
+.pp-censo-prop { margin-top: 12px; padding: 10px 11px; border-radius: 8px;
+  background: #FAF8F3; border: 1px solid var(--linea1); }
+.pp-censo-prop-val { font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 22px;
+  color: var(--azul-institucional); }
+.pp-censo-aviso { font-size: 12px; color: #8a5a22; margin-top: 6px; line-height: 1.4; }
+.pp-censo-aviso.neutro { color: var(--muted); }
 
 /* ---- mensaje cero resultados ---- */
 .cero-resultados {
@@ -198,3 +322,19 @@ select option:disabled { color: #b9b3a7; }
   box-shadow: 0 8px 26px rgba(0,0,0,.18); padding: 20px 24px; width: 340px; text-align: center;
 }
 .cero-resultados p { font-size: 13.5px; color: var(--tinta-media); line-height: 1.5; margin-bottom: 12px; }
+
+/* ---- responsive ----
+   La barra ya envuelve sola (flex-wrap): bajo un ancho critico pasa a dos filas
+   sin regla extra. El panel lateral, ya sin filtros, es mucho mas corto: su tope
+   de altura baja de 38vh a 30vh. */
+@media (max-width: 860px) {
+  .cuerpo { flex-direction: column; }
+  .panel-lateral { width: 100%; max-height: 30vh; border-right: none;
+    border-bottom: 1px solid var(--linea1); }
+  .cabecera-titulos h1 { font-size: 17px; }
+  .logo { height: 56px; }
+  .barra-filtros { padding: 10px 18px 12px; gap: 10px 12px; }
+  .barra-filtros .filtro { flex: 1 1 auto; }
+  .barra-filtros .filtro select { width: 100%; max-width: none; }
+  .filtro-accion { margin-left: 0; flex: 0 0 auto; }
+}
