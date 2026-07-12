@@ -1,19 +1,19 @@
 ---
 slug: slep_georreferenciacion
-nombre_real: SLEP Georreferenciación (Costa Central)
+nombre_real: SLEP Georreferenciacion - Territorio Costa Central
 categoria: activo
 semaforo: activo
-sesion_actual: v08
+sesion_actual: v10
 ultima_actividad: 2026-07-12
-maneja_sensibles: false
-tipo_pendiente: bug
+maneja_sensibles: true
+tipo_pendiente: nuevo
 ---
 ## En que vamos
-Los tres productos (dos afiches A0 y el mapa interactivo regional) están completos y auditados; el pipeline no se toca hace dos sesiones. La sesión 8 cerró el borde entre lo hecho y lo publicado: los 10 commits de la sesión 7 viajaron al remoto (incluida la regla de gobernanza que sella los intermedios derivados de MRUN) y el backlog acumulativo quedó al día con la serie correlativa íntegra del 20 al 24. El proyecto no tiene, por primera vez desde la sesión 4, deuda de gobernanza ni documental pendiente de ejecución.
+El mapa interactivo (variante 3) esta publicado y sin pendientes ejecutables; los afiches A0 (variantes 1 y 2) siguen esperando validacion del director. La sesion 10 diagnostico a fondo el Censo 2024 y cerro la decision de alcance de la capa censal: dos capas, dos indicadores, dos escalas (densidad de poblacion en edad escolar a nivel manzana en Costa Central; tasa de asistencia a nivel zona/localidad en la region continental). No se escribio codigo de producto: la sesion produjo dos reportes de medicion y un archivo de decision formal.
 
 ## Proximo paso
-Incorporar el resultado del re-chequeo visual del mapa interactivo (pendiente desde v07, aún sin resultado): si arroja correcciones encabezan todo con ciclo diagnóstico→cambio→re-auditoría sobre `docs/data/`; si sale limpio, el Censo 2024 toma la sesión completa con contexto fresco.
+Etapa 2: construir la capa censal segun la decision de alcance, empezando por la prueba de humo de render en Leaflet (~6.000 poligonos, transferencia medida pero FPS no verificado).
 
 ## Bloqueantes
-- Validación del director sobre los afiches 1 y 2 (externo, abierto desde v05).
-- Validación con el equipo experto sobre el mapa interactivo (externo, abierto desde v06).
+- El titular debe copiar cuatro insumos del Censo (tres parquet de cartografia + P7_Educacion.xlsx) desde la raiz de datos de `slep_estudio_oferta_demanda` a la de este proyecto. Sin eso la Etapa 2 no arranca. No es bloqueante del proyecto completo (hay trabajo ejecutable: commit del cierre acumulado v09+v10).
+- Validacion del director sobre los afiches A0: bloqueante externo de esas dos variantes desde v05, no del proyecto.

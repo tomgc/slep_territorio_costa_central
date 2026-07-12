@@ -81,3 +81,15 @@ _archivo/
 # Los JSON agregados de web/data/ SI se versionan: son producto canonico del pipeline,
 # auditados, sin identificador individual (el MRUN se descarta tras agregar).
 40_salidas/mapa_interactivo/*.rds
+
+# =============================================================================
+# Crudos del Censo 2024 (sesion 11, gobernanza POLITICA §6): geoparquet del INE,
+# copiados desde la raiz de datos de slep_estudio_oferta_demanda. Pesados
+# (Manzanas: 194 M) y regenerables desde la fuente INE. El producto que SI se
+# versiona son los GeoJSON agregados de docs/data/, sin identificador individual.
+# El microdato de personas NO entra al proyecto (decision de alcance §5).
+# Doble sello deliberado: por ruta (si el arbol cambia) y por extension (si un
+# parquet aparece en otro lado). Hoy el repo no versiona ningun .parquet.
+# =============================================================================
+20_insumos/censo_2024/
+*.parquet
