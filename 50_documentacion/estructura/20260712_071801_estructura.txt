@@ -1,10 +1,9 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-07-12 07:52:04
-Total entradas: 376 (75 carpetas, 301 archivos)
+Fecha: 2026-07-12 07:18:01
+Total entradas: 375 (75 carpetas, 300 archivos)
 
 ## Arbol
 
-```
     00_escanear_proyecto.R  (  3.2K)
     00_run_all.R  (  3.08K)
 [D] 10_utils  (-)
@@ -326,19 +325,18 @@ Total entradas: 376 (75 carpetas, 301 archivos)
     50_documentacion/andamios/reporte_diagnostico_mapa_interactivo.md  ( 13.18K)
     50_documentacion/andamios/reporte_fase0_escala_unica.md  ( 12.03K)
 [D] 50_documentacion/estructura  (-)
+    50_documentacion/estructura/20260629_143211_estructura.md  ( 11.43K)
+    50_documentacion/estructura/20260629_143211_estructura.txt  ( 11.42K)
     50_documentacion/estructura/20260629_143333_estructura.md  ( 11.43K)
     50_documentacion/estructura/20260629_143333_estructura.txt  ( 11.42K)
-    50_documentacion/estructura/20260712_071801_estructura.md  ( 30.44K)
-    50_documentacion/estructura/20260712_071801_estructura.txt  ( 30.43K)
-    50_documentacion/estructura/estructura_actual.md  ( 30.44K)
-    50_documentacion/estructura/estructura_actual.txt  ( 30.43K)
+    50_documentacion/estructura/estructura_actual.md  ( 11.43K)
+    50_documentacion/estructura/estructura_actual.txt  ( 11.42K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)
     50_documentacion/traspasos/traspaso_cierre_v03.md  ( 10.9K)
     50_documentacion/traspasos/traspaso_cierre_v04.md  ( 16.27K)
     50_documentacion/traspasos/traspaso_cierre_v05.md  ( 19.76K)
-    50_documentacion/traspasos/traspaso_cierre_v06.md  ( 23.54K)
     CLAUDE.md  (  2.92K)
 [D] design_handoff_mapa_establecimientos  (-)
 [D] design_handoff_mapa_establecimientos/assets  (-)
@@ -381,12 +379,11 @@ Total entradas: 376 (75 carpetas, 301 archivos)
     slep_georreferenciacion.Rproj  (190)
 [D] tests  (-)
 [D] tests/testthat  (-)
-```
 
 ## Conteo por extension
 
 - .pdf: 61
-- .md: 51
+- .md: 50
 - .R: 39
 - .png: 35
 - .csv: 29
