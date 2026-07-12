@@ -1,7 +1,8 @@
 /* =============================================================================
-   estilo.css — mapa interactivo regional. Identidad del afiche (33): paleta
-   papel/ciruela/tintas, tipografias gobCL (titulos) y Museo Sans (texto).
-   Hito 2b: tipografia mayor, panel con aire, tarjeta agrandada.
+   estilo.css — mapa interactivo regional. Paleta papel/azul institucional/tintas
+   (sesion 9: el azul #0D2E52 del SLEP Costa Central reemplaza al color del
+   afiche impreso como UNICO color principal del chrome), tipografias gobCL
+   (titulos) y Museo Sans (texto). Hito 2b: tipografia mayor, panel con aire.
    ============================================================================= */
 
 @font-face { font-family: 'gobCL'; src: url('fonts/gobCL_Heavy.otf') format('opentype'); font-weight: 900; font-display: swap; }
@@ -10,13 +11,16 @@
 @font-face { font-family: 'Museo Sans'; src: url('fonts/MuseoSans_500.otf') format('opentype'); font-weight: 500; font-display: swap; }
 
 :root {
-  --pagina: #EAE6DC; --papel: #FFFFFF; --ciruela: #4A2746;
+  --pagina: #EAE6DC; --papel: #FFFFFF; --azul-institucional: #0D2E52;
   --tinta: #1C1212; --tinta-media: #2E2230; --bajada: #5d5650;
   --muted: #9a9488; --linea1: #E7DFC9; --linea2: #E2D9C4;
   --atenuado: #c9c4bb;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+/* Restablece la semantica del atributo hidden frente a cualquier display de
+   autor (un display:flex de clase, como .combobox-sel, lo anularia). */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   font-family: 'Museo Sans', 'Segoe UI', sans-serif; font-weight: 300;
@@ -26,17 +30,17 @@ body {
 
 /* ---- cabecera ---- */
 .cabecera {
-  background: var(--papel); border-bottom: 2px solid var(--ciruela);
+  background: var(--papel); border-bottom: 2px solid var(--azul-institucional);
   display: flex; align-items: center; gap: 22px; padding: 12px 26px; flex: none;
 }
 .logo { height: 96px; width: auto; display: block; }
 .cabecera-sep { width: 1px; height: 72px; background: var(--linea2); }
 .cabecera-titulos h1 {
   font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 23px;
-  color: var(--ciruela); letter-spacing: -0.01em; line-height: 1.1;
+  color: var(--azul-institucional); letter-spacing: -0.01em; line-height: 1.1;
 }
 .bajada { font-size: 14px; color: var(--bajada); margin-top: 3px; }
-#contador { font-weight: 500; color: var(--ciruela); }
+#contador { font-weight: 500; color: var(--azul-institucional); }
 
 /* ---- cuerpo: panel + mapa ---- */
 .cuerpo { flex: 1; display: flex; min-height: 0; }
@@ -81,7 +85,7 @@ body {
 .leaflet-popup-content { margin: 18px 20px; font-family: 'Museo Sans', sans-serif; }
 .pp { width: 520px; }
 .pp-nombre { font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 18px;
-  color: var(--ciruela); line-height: 1.25; }
+  color: var(--azul-institucional); line-height: 1.25; }
 .pp-rbd { font-weight: 400; font-size: 13px; color: var(--bajada); }
 .pp-sub { font-size: 14.5px; color: var(--bajada); margin: 5px 0 13px; line-height: 1.4; }
 .pp-indicadores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
@@ -145,7 +149,9 @@ body {
   font-size: 13.5px; color: var(--tinta); background: var(--papel);
   border: 1px solid var(--linea2); border-radius: 7px; padding: 7px 9px;
 }
-.filtro select:focus, .combobox input:focus { outline: 2px solid #B7A6C4; outline-offset: 0; }
+/* anillo de foco azul claro: 3,64:1 sobre papel (>= 3,0 no-texto, WCAG 1.4.11);
+   el #7FA3C7 propuesto daba 2,64:1 y se oscurecio un paso */
+.filtro select:focus, .combobox input:focus { outline: 2px solid #5E8AB4; outline-offset: 0; }
 .combobox { position: relative; }
 .combobox-lista {
   position: absolute; left: 0; right: 0; top: calc(100% + 3px); z-index: 1200;
@@ -168,20 +174,20 @@ body {
 .boton-limpiar {
   width: 100%; margin-top: 4px; padding: 9px 10px; cursor: pointer;
   font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 12.5px;
-  color: var(--ciruela); background: var(--papel);
-  border: 1.5px solid var(--ciruela); border-radius: 8px;
+  color: var(--azul-institucional); background: var(--papel);
+  border: 1.5px solid var(--azul-institucional); border-radius: 8px;
 }
-.boton-limpiar:hover { background: #F6F1F4; }
+.boton-limpiar:hover { background: #EEF2F7; }
 select option:disabled { color: #b9b3a7; }
 
 /* ---- exportacion (hito 4) ---- */
 .boton-exportar {
   width: 100%; margin-bottom: 8px; padding: 9px 10px; cursor: pointer;
   font-family: 'gobCL', sans-serif; font-weight: 900; font-size: 12.5px;
-  color: #fff; background: var(--ciruela);
-  border: 1.5px solid var(--ciruela); border-radius: 8px;
+  color: #fff; background: var(--azul-institucional);
+  border: 1.5px solid var(--azul-institucional); border-radius: 8px;
 }
-.boton-exportar:hover { background: #5D3358; }
+.boton-exportar:hover { background: #1A4576; }
 .boton-exportar:disabled { opacity: .55; cursor: wait; }
 #bloque-exportar .nota-suave { margin-top: 4px; }
 

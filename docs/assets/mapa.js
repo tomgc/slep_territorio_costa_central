@@ -26,10 +26,12 @@ const ETIQUETA_DEP = {
   'Corp. de Administración Delegada': 'Corporación de Administración Delegada'
 };
 const COLOR_ATENUADO = '#c9c4bb';
-const COLOR_CIRUELA  = '#4A2746';
+const COLOR_INSTITUCIONAL = '#0D2E52';  // azul SLEP CC: unico color principal (sesion 9)
 const HOVER_EXTRA = 4.5;          // crecimiento del pin al hover (mas notorio)
 const HOVER_MS    = 180;          // duracion del tween (suave, no salto)
 const TOLERANCIA_HOVER = 8;       // px extra de area sensible ("close-enough")
+const ZOOM_MAX_ENCUADRE = 14;     // tope al encuadrar filtrados (un pin unico no salta a z19)
+const PAD_ENCUADRE_FILTRO = 0.12; // aire alrededor del encuadre de los coincidentes
 // Radio por zoom (densidad evaluada empiricamente). Costa Central +1 (doble codificacion).
 function radioBase(z) { return z <= 9 ? 3.5 : z <= 11 ? 4.5 : 5.5; }
 const ETIQUETA_SLEP = 'Servicio Local de Educación';
@@ -154,7 +156,7 @@ function sparkline(serie, anios) {
   for (const sg of seg) {
     if (sg.length > 1) {
       const pts = sg.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-      g += `<polyline points="${pts}" fill="none" stroke="${COLOR_CIRUELA}" stroke-width="1.8"/>`;
+      g += `<polyline points="${pts}" fill="none" stroke="${COLOR_INSTITUCIONAL}" stroke-width="1.8"/>`;
     }
   }
   // puntos + valor etiquetado en cada uno (alternando arriba/abajo); max y min destacados
@@ -168,11 +170,11 @@ function sparkline(serie, anios) {
     if (esMax) maxMarcado = true;
     if (esMin) minMarcado = true;
     const px = x(i), py = y(v);
-    g += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(esMax || esMin) ? 3.1 : 2.1}" fill="${COLOR_CIRUELA}"/>`;
+    g += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${(esMax || esMin) ? 3.1 : 2.1}" fill="${COLOR_INSTITUCIONAL}"/>`;
     const arriba = alterna % 2 === 0; alterna++;
     const ty = arriba ? py - 7 : py + 14;
     const peso = (esMax || esMin) ? ' font-weight="bold"' : '';
-    g += `<text x="${px.toFixed(1)}" y="${Math.max(8, Math.min(H - PB - 2, ty)).toFixed(1)}" font-size="10.2"${peso} fill="${(esMax || esMin) ? COLOR_CIRUELA : '#6b655c'}" text-anchor="middle">${fmt(v)}</text>`;
+    g += `<text x="${px.toFixed(1)}" y="${Math.max(8, Math.min(H - PB - 2, ty)).toFixed(1)}" font-size="10.2"${peso} fill="${(esMax || esMin) ? COLOR_INSTITUCIONAL : '#6b655c'}" text-anchor="middle">${fmt(v)}</text>`;
   });
   // eje X: TODOS los anios etiquetados
   anios.forEach((a, i) => {
@@ -424,6 +426,12 @@ function aplicarFiltros() {
       document.getElementById('mapa').appendChild(cero);
     }
   } else if (cero) cero.remove();
+  // zoom-to-fit: con filtros activos y resultados, encuadra los coincidentes.
+  // Con n === 0 la vista NO se mueve (el mensaje de cero ya informa).
+  if (activos && coincidentes.length) {
+    S.mapa.fitBounds(L.featureGroup(coincidentes).getBounds().pad(PAD_ENCUADRE_FILTRO),
+                     { maxZoom: ZOOM_MAX_ENCUADRE, animate: true });
+  }
   reconstruirOpciones();
 }
 function limpiarFiltros() {
@@ -433,6 +441,8 @@ function limpiarFiltros() {
   document.getElementById('f-ee').value = '';
   document.getElementById('f-nivel-wrap').hidden = true;
   aplicarFiltros();
+  // limpiar es un gesto distinto de filtrar: vuelve al encuadre por defecto
+  S.mapa.fitBounds(S.boundsDefecto, { animate: true });
 }
 function iniciarFiltros() {
   const enlazar = (id, clave) => {
@@ -611,9 +621,9 @@ function construirSVG() {
 ${aten}${plenos}${rotulos}
 </g>
 ${leyenda}
-<text x="20" y="38" font-family="${FUENTE_TITULO}" font-size="21" font-weight="bold" fill="#4A2746">Mapa de establecimientos educacionales · Región de Valparaíso</text>
+<text x="20" y="38" font-family="${FUENTE_TITULO}" font-size="21" font-weight="bold" fill="${COLOR_INSTITUCIONAL}">Mapa de establecimientos educacionales · Región de Valparaíso</text>
 <text x="20" y="64" font-family="${FUENTE_TEXTO}" font-size="12.5" fill="#5d5650">${escXML(linea2)}</text>
-<line x1="0" y1="${SVG_CAB - 2}" x2="${W}" y2="${SVG_CAB - 2}" stroke="#4A2746" stroke-width="2"/>
+<line x1="0" y1="${SVG_CAB - 2}" x2="${W}" y2="${SVG_CAB - 2}" stroke="${COLOR_INSTITUCIONAL}" stroke-width="2"/>
 <text x="20" y="${SVG_CAB + HM + 18}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie1)}</text>
 <text x="20" y="${SVG_CAB + HM + 32}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie2)}</text>
 <text x="20" y="${SVG_CAB + HM + 46}" font-family="${FUENTE_TEXTO}" font-size="9.5" fill="#9a9488">${escXML(pie3)}</text>
@@ -776,8 +786,10 @@ async function iniciar() {
     const renderer = L.canvas({ tolerance: TOLERANCIA_HOVER });  // area sensible ampliada
     S.zoomActual = 10;
     crearCapa(mapa, renderer);
-    // encuadre: Costa Central protagonista con contexto regional inmediato
-    mapa.fitBounds(capaFrontera.getBounds().pad(0.15));
+    // encuadre por defecto: Costa Central protagonista con contexto regional
+    // inmediato. Guardado en S como UNICA fuente de verdad (limpiarFiltros vuelve aqui).
+    S.boundsDefecto = capaFrontera.getBounds().pad(0.15);
+    mapa.fitBounds(S.boundsDefecto);
 
     // Rotulos de COMUNA propios (los del basemap quedaron bajo los pins; estos
     // son ~36 y van ARRIBA de los pins con halo blanco: el texto se lee y deja
