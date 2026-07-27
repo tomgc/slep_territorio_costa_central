@@ -1,6 +1,27 @@
 # SETTINGS_Y_PROMPTS_OPERACIONALES.md
 
-> **Versión 12.**
+> **Versión 14.**
+>
+> **Cambios respecto a v13:** nueva §4.7 (**ordenación del repositorio**),
+> protocolo bajo demanda que ejecuta en un repo concreto lo que la POLITICA
+> v5.5 ya declaró en norma: regla 1.3.1 (traspaso vigente), prefijo de decena
+> en `50_*` con sus excepciones por contrato de cartera (§2), y exclusión de
+> árboles de dependencias de terceros en el escáner (§7.2). Añade lo que la
+> política no norma: el tratamiento de obsoletos y duplicados con grado de
+> certeza y grep de referencias vivas. Nuevo paso **4bis** en §1.2.2, gatillo
+> observable de apertura que enciende el pendiente en cada proyecto de la
+> cartera y se apaga con el marcador
+> `50_documentacion/activa/50_ordenacion_repositorio.md`. Motivo de diseño:
+> propagar el pendiente a los 18 repos por norma en la knowledge base y no por
+> 18 escrituras en `backlog_acumulativo.md`.
+>
+> **Versión 13.** Cambios respecto a v12: §2.1 suma el **archivado del traspaso anterior**
+> como paso obligatorio del cierre, con su comprobación (`vigentes=1`), en
+> aplicación de la nueva regla 1.3.1 de `POLITICA_PROYECTO.md` v5.5:
+> `traspasos/` mantiene un solo archivo a la vista y `traspasos/archivo/`
+> guarda los superados. El correlativo pasa a admitir tres dígitos desde
+> v100. Origen: sesión v103 de `slep_aprendizajes_ep`, con 102 traspasos
+> planos en la carpeta.
 >
 > **Cambios respecto a v11 (ola canónica mínima de la auditoría de errores
 > de la cartera, 2026-07-25):** §1.2.6 reemplaza el recordatorio de fuente
@@ -258,6 +279,16 @@ la sesión correrá en Claude Code.
    política. Toda desviación (carpetas con nombres antiguos, archivos
    fuera de lugar, huecos de numeración) se marca como **deuda heredada**,
    no se "ajusta" en silencio. Sin cambio.
+4bis. **Gatillo de ordenación del repositorio.** Comprobar si existe
+   `50_documentacion/activa/50_ordenacion_repositorio.md`. Si **no** existe,
+   el proyecto no ha pasado la ordenación de la política v5.5 y el pendiente
+   está vigente: declararlo en el acuse (Fase B, "Vigentes que condicionan
+   esta sesión") en una línea, con el resultado de
+   `ls 50_documentacion/traspasos/*.md | wc -l` como evidencia, y ofrecerlo
+   en la ruta de desarrollo (Fase C) como prioridad propuesta. **No se
+   ejecuta dentro de la sesión sin aprobación explícita** ni desplaza el foco
+   que el traspaso fijó: es una propuesta, no una interrupción. El protocolo
+   está en §4.7. Si el archivo existe, no se menciona.
 5. **Ejecutar la auditoría de apertura** (política, sección 5.6, preguntas
    marcadas "Apertura") y anotar hallazgos. Sin cambio.
 
@@ -598,7 +629,8 @@ aplica); planes no anclados en insumos reales.
 ### 2.1 Generación
 
 Al cerrar una sesión CONTINUATION o NEW PROJECT, generar
-`traspaso_cierre_vNN.md` (correlativo global, dos dígitos; snake_case
+`traspaso_cierre_vNN.md` (correlativo global; dos dígitos hasta v99, tres
+desde v100; snake_case
 según la política, sección 2; unifica la grafía antigua con guiones)
 en `50_documentacion/traspasos/`. El traspaso es el **único puente**
 entre sesiones: todo lo que no quede ahí, se pierde. Antes de cerrar:
@@ -626,6 +658,32 @@ por su vacío y son obligatorias incluso vacías, porque su vacío es una
 afirmación verificable: Bugs de la sesión (2.2 punto 6), la auditoría de
 cierre (dentro de 2.2 punto 11) y la tabla de errores del asistente
 (2.2.15).
+
+**Archivado del traspaso anterior (POLITICA 1.3.1) — paso obligatorio.**
+`50_documentacion/traspasos/` contiene **un solo** archivo: el vigente.
+Antes de depositar el traspaso nuevo, mover el anterior:
+
+```bash
+cd <raiz_del_proyecto> && \
+  mkdir -p 50_documentacion/traspasos/archivo && \
+  git mv 50_documentacion/traspasos/traspaso_cierre_v<NN-1>.md \
+         50_documentacion/traspasos/archivo/
+```
+
+`git mv` siempre, nunca `cp` + `rm`: el historial de cada traspaso debe
+seguir siendo rastreable con `git log --follow`. Nada se borra jamás de
+`archivo/`.
+
+**Comprobación de cierre**, junto con las demás:
+
+```bash
+cd <raiz_del_proyecto> && \
+  n=$(ls 50_documentacion/traspasos/*.md | wc -l | tr -d ' ') && \
+  echo "vigentes=$n" && [ "$n" = "1" ] || { echo "FALLA: cierre a medias"; exit 1; }
+```
+
+Si el proyecto todavía tiene todos sus traspasos planos, migrarlos a
+`archivo/` es parte de ESTE cierre, no un pendiente que se hereda.
 
 **Chequeo de cierre del backlog (2.2.5):** si este es el segundo cierre o
 posterior y el backlog aún vive embebido en el traspaso, o en un archivo
@@ -1316,3 +1374,122 @@ suitedoc::generar_suite(
 )
 # Requiere npm + red en tiempo de generación (descarga lucide-static fijado).
 ```
+
+### 4.7 Ordenación del repositorio
+
+Pone el árbol de un proyecto al día con la política v5.5. **No toca el
+pipeline:** mueve, renombra y archiva documentación. Nada se borra: todo lo
+que sale del árbol vivo va a `_archivo/YYYYMMDD/` conservando su ruta
+relativa (política 1.5). El protocolo se ejecuta una vez por proyecto; el
+mantenimiento posterior lo hace el cierre de sesión (§2.1, `vigentes=1`).
+
+**Cuándo aplica.** Cuando el gatillo de §1.2.2 punto 4bis se enciende (no
+existe `50_documentacion/activa/50_ordenacion_repositorio.md`) y el usuario
+aprueba abordarlo. También bajo demanda, invocando "ordenación del
+repositorio".
+
+**Tipo de sesión.** Se ejecuta como tarea dentro de una CONTINUATION del
+propio proyecto, no como sesión aparte: necesita el traspaso leído para saber
+qué documento está superado y cuál no.
+
+**Reparto de instancias.** El asistente conversacional redacta el encargo y
+decide los grados de certeza; Claude Code ejecuta los movimientos, los greps
+y los commits. El asistente no propone que el usuario mueva archivos a mano.
+
+#### 4.7.1 Precondiciones bloqueantes
+
+Se verifican **antes de tocar nada**. Si alguna falla, detenerse y reportar;
+no se "resuelve de paso".
+
+```bash
+cd <raiz_proyecto>
+git status --porcelain            # debe salir vacío (índice y árbol limpios)
+git stash list                    # debe salir vacío
+git rev-list --left-right --count @{u}...HEAD   # debe ser "0	0"
+git rev-parse --abbrev-ref HEAD   # NO debe ser main/master
+```
+
+Rama de trabajo propia: `ordenacion/<AAAAMMDD>`. El merge lo decide el
+titular; el protocolo termina en PR, nunca en merge.
+
+#### 4.7.2 Alcance (cuatro bloques, un commit por bloque)
+
+**Bloque 1 — Traspasos.** `50_documentacion/traspasos/` queda con un solo
+archivo, el de la última sesión cerrada; el resto va a `traspasos/archivo/`
+con `git mv` (nunca `cp` + `rm`, que rompe `git log --follow`). Es la regla
+1.3.1 de la política v5.5 y el paso de cierre de §2.1 de este documento. Si
+la copia local de `POLITICA_PROYECTO.md` o de
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md` en `50_documentacion/activa/` es
+anterior a v5.5 / v14, actualizarla desde la knowledge base es parte de este
+bloque. Aserción de cierre: `ls 50_documentacion/traspasos/*.md` devuelve una
+línea.
+
+**Bloque 2 — Obsoletos y duplicados.** Proponer candidatos a
+`_archivo/YYYYMMDD/`: documentos superados por una versión posterior, specs
+de arquitecturas abandonadas, salidas regenerables, residuos de sesión. Cada
+candidato lleva **grado de certeza** declarado:
+
+| Grado | Criterio | Tratamiento |
+|---|---|---|
+| Alto | Existe la versión posterior en el árbol, o el traspaso declara la arquitectura abandonada | Se mueve |
+| Medio | Parece superado pero nada lo declara | Grep obligatorio antes de mover |
+| Bajo | Solo el nombre o la fecha lo sugieren | No se mueve; se lista como duda en el encargo |
+
+El grep de referencias vivas es `grep -rn --exclude-dir=_archivo
+--exclude-dir=.git "<nombre_archivo>" .`. **Si devuelve una referencia viva,
+la fila se cancela y se reporta**; no se mueve y no se "arregla la
+referencia" en el mismo paso. `andamios/` está congelado (política 1.2): sus
+archivos nunca son candidatos, y una referencia dentro de `andamios/` es
+registro histórico, no referencia viva (se anota, no cancela la fila).
+
+**Bloque 3 — Nomenclatura.** Los archivos de las subcarpetas de `50_*` llevan
+el prefijo de su decena, en minúsculas y snake_case (política §2). **Antes de
+renombrar cualquier archivo, grep de su nombre en `POLITICA_PROYECTO.md` y en
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md`.** Si aparece fijado por nombre, no se
+renombra, por muy fuera de patrón que se vea: su nombre es un contrato que
+excede al proyecto. Las excepciones ya declaradas por la política (`ESTADO.md`,
+`gobernanza_datos.md`, `backlog_acumulativo.md`, `POLITICA_PROYECTO.md`,
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md`) se dan por verificadas; el grep cubre
+las no anticipadas. Origen de la regla: sesión v103 de
+`slep_aprendizajes_ep`, donde el renombre de `ESTADO.md` se ejecutó y hubo que
+revertirlo. Todo renombre que sí proceda **actualiza sus referencias en el
+mismo commit**.
+
+**Bloque 4 — Escáner.** Verificar que `00_escanear_proyecto.R` excluya del
+barrido `node_modules/`, `packrat/` y `venv/` (política §7.2). Si no lo hace,
+los totales que declaran los traspasos están midiendo una dependencia y no el
+proyecto: corregir el script y declarar en el manifiesto el total antes y
+después.
+
+#### 4.7.3 Entrega
+
+1. **Encargo previo** en `50_documentacion/andamios/`, con la lista concreta
+   de movimientos y el grado de certeza de cada uno. Se entrega y se aprueba
+   **antes** de ejecutar.
+2. **Manifiesto** con hashes (`git hash-object`) de cada archivo movido,
+   origen y destino.
+3. **Log de greps** con el resultado de cada uno, **incluidas las filas
+   canceladas**. Una ejecución sin filas canceladas no es una ejecución
+   limpia por definición: si no hubo ninguna, se declara.
+4. **Commits selectivos**, uno por bloque, con rutas explícitas. Nunca
+   `git add -A` ni `git add .`.
+5. **Grep de privacidad y de coautoría** antes de cada commit de
+   documentación (política §6): sin RUT, sin nombres de personas, sin
+   atribución de coautoría a la herramienta.
+6. **Escáner al final** y **PR**. El merge lo decide el titular.
+7. **Marcador:** el último commit crea
+   `50_documentacion/activa/50_ordenacion_repositorio.md` con la fecha, la
+   rama, el hash del PR y el conteo de archivos movidos por bloque. Ese
+   archivo apaga el gatillo de §1.2.2 punto 4bis. Sin él, la ordenación se
+   volvería a proponer en cada apertura.
+
+#### 4.7.4 Prohibido
+
+- Borrar cualquier archivo (todo va a `_archivo/`).
+- `cp` + `rm` donde corresponde `git mv`.
+- Mover un candidato de grado medio o bajo sin grep previo.
+- Renombrar un archivo citado por nombre en la política o en este documento.
+- Tocar `30_procesamiento/` o cualquier script del pipeline.
+- Reescribir rutas dentro de `andamios/` (política 1.2).
+- Mezclar la ordenación con cambios de contenido: un cambio conceptual por
+  intervención.
