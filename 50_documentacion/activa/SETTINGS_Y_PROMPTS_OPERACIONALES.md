@@ -1,6 +1,65 @@
 # SETTINGS_Y_PROMPTS_OPERACIONALES.md
 
-> **Versión 8 (consolidada).** Vive permanentemente en la knowledge base
+> **Versión 14.**
+>
+> **Cambios respecto a v13:** nueva §4.7 (**ordenación del repositorio**),
+> protocolo bajo demanda que ejecuta en un repo concreto lo que la POLITICA
+> v5.5 ya declaró en norma: regla 1.3.1 (traspaso vigente), prefijo de decena
+> en `50_*` con sus excepciones por contrato de cartera (§2), y exclusión de
+> árboles de dependencias de terceros en el escáner (§7.2). Añade lo que la
+> política no norma: el tratamiento de obsoletos y duplicados con grado de
+> certeza y grep de referencias vivas. Nuevo paso **4bis** en §1.2.2, gatillo
+> observable de apertura que enciende el pendiente en cada proyecto de la
+> cartera y se apaga con el marcador
+> `50_documentacion/activa/50_ordenacion_repositorio.md`. Motivo de diseño:
+> propagar el pendiente a los 18 repos por norma en la knowledge base y no por
+> 18 escrituras en `backlog_acumulativo.md`.
+>
+> **Versión 13.** Cambios respecto a v12: §2.1 suma el **archivado del traspaso anterior**
+> como paso obligatorio del cierre, con su comprobación (`vigentes=1`), en
+> aplicación de la nueva regla 1.3.1 de `POLITICA_PROYECTO.md` v5.5:
+> `traspasos/` mantiene un solo archivo a la vista y `traspasos/archivo/`
+> guarda los superados. El correlativo pasa a admitir tres dígitos desde
+> v100. Origen: sesión v103 de `slep_aprendizajes_ep`, con 102 traspasos
+> planos en la carpeta.
+>
+> **Cambios respecto a v11 (ola canónica mínima de la auditoría de errores
+> de la cartera, 2026-07-25):** §1.2.6 reemplaza el recordatorio de fuente
+> primaria (GR-01) por el **marcador de fuente en línea** acotado a cuatro
+> tipos de afirmación, con las dos únicas formas legales del marcador. §2.2.15
+> suma tres campos obligatorios (`gatillo_observable` con vocabulario
+> controlado, `intentos_previos`, `costo`), fija el conjunto válido de
+> etiquetas en `PAT-01` a `PAT-12` y actualiza la ruta del catálogo a `_v2`;
+> la regla de formato pasa de siete a diez campos. Nueva §2.2.17 (registro de
+> fricciones en una línea), que el catálogo v2 ya referenciaba como
+> tratamiento de PAT-08. Las tres reglas que la v11 agregó a §1.2.6 se
+> conservan intactas: esta edición sustituye una sola viñeta de esa sección.
+>
+> *Fundamento y alcance.* La adopción se decidió con el criterio "¿existe algo
+> que impida emitir con el slot vacío?", no con la tasa de cobertura
+> retrospectiva: el bloque de control del backtest
+> (`gobernanza/auditoria_errores/backtest_salvaguardas_v1.md`) mostró dos
+> slots ya instalados con 54% de cobertura cuyos patrones reinciden igual. De
+> las doce fichas candidatas
+> (`gobernanza/auditoria_errores/fichas_salvaguardas_v1.md`), **solo S-01 se
+> adopta en esta edición**; las restantes esperan el piloto prospectivo. La
+> versión universal de S-01 se evaluó y se descartó con evidencia.
+>
+> **Versión 11.** Cambios respecto a v10 (sesión 52, 2026-07-24, tras dos
+> errores del asistente en la misma sesión): §1.2.6 suma tres reglas
+> permanentes. (1) *Fuente primaria de una ESTRUCTURA es su inspección, no su
+> descripción* — cierra el hueco que produjo ERR-52-01: §4.6 describe la `cfg`
+> de `suitedoc` con detalle suficiente como para sentirse conocida, y se
+> escribieron ~700 líneas contra un esquema inventado; la regla vieja de fuente
+> primaria se cumplió en apariencia porque el documento normativo SÍ se había
+> leído. (2) *Brevedad por forma, no por cantidad* — los topes por palabras de
+> v10 nunca operaron (no se cuentan palabras al escribir); se reemplazan por
+> topes de líneas por tipo de respuesta y una lista de construcciones
+> prohibidas, ambos verificables mirando el borrador. (3) Corolario GR-06b a
+> *Entrega materializada con destino* — pegar contenido en el chat y pedir al
+> titular que arme el archivo es violación, no atajo (ERR-52-02).
+>
+> **Versión 10 (consolidada).** Vive permanentemente en la knowledge base
 > del Project (y se copia a `50_documentacion/activa/` de cada proyecto).
 > Absorbe y reemplaza a: `prompt-apertura-sesion.md` (v3),
 > `prompt-cierre-sesion.md` (v4), `prompt_orquestador.md`,
@@ -8,6 +67,35 @@
 > `prompt_portabilidad_cross_os.md`. La arquitectura que esos prompts
 > implementaban vive ahora en `POLITICA_PROYECTO.md` v5; aquí viven los
 > PROTOCOLOS de sesión y de operación.
+>
+> **Cambios respecto a v9 (tercera y última adopción del análisis
+> comparativo con obra/superpowers,
+> `mantenimiento/20260702_analisis_superpowers/informe_comparativo.md`,
+> sección d, adopción #3):** §1.2.6, bajo "Bugs: causa raíz antes de
+> corregir", suma un tercer sub-bullet de recepción de correcciones del
+> titular (verificar contra el estado real antes de aplicar; sin agrado
+> performativo, actuar). Cierra las tres adopciones aprobadas del informe.
+>
+> **Cambios respecto a v8 (dos adopciones del análisis comparativo con
+> obra/superpowers, `mantenimiento/20260702_analisis_superpowers/informe_comparativo.md`,
+> sección d):**
+>
+> *Adopción #2 (mecanismo de systematic-debugging, riesgo bajo):* §1.2.6,
+> bajo "Bugs: causa raíz antes de corregir", suma dos sub-bullets de
+> procedimiento que antes faltaban bajo un principio ya afirmado: escalada
+> objetiva tras tres fixes fallidos (cortar y reportar "la arquitectura
+> puede estar mal", activando la excepción de autonomía de POLITICA 0.3) e
+> instrumentación por frontera en pipelines multi-etapa (loguear qué entra
+> y sale en cada frontera antes de adivinar la capa que falla).
+>
+> *Adopción #1 (validación empírica de reglas, riesgo bajo-medio):* nueva
+> §2.2.16 que, cuando §2.2.15 detecta un `patron` reincidente en 2+
+> proyectos, obliga a clasificar la falla (disciplina / forma del output /
+> omisión / condición ambigua) antes de reformular la regla, para elegir la
+> forma correcta del arreglo (prohibición vs. receta positiva vs. campo
+> obligatorio vs. condicional) en lugar de endurecer la prohibición por
+> defecto. El micro-test empírico contra control queda declarado fuera de
+> alcance (no hay infraestructura de testing de prompts hoy).
 >
 > **Cambios respecto a v7 (integra dos lotes de propuestas ya
 > diagnosticadas, sesión BIBLIOTECA de integración editorial):**
@@ -191,6 +279,16 @@ la sesión correrá en Claude Code.
    política. Toda desviación (carpetas con nombres antiguos, archivos
    fuera de lugar, huecos de numeración) se marca como **deuda heredada**,
    no se "ajusta" en silencio. Sin cambio.
+4bis. **Gatillo de ordenación del repositorio.** Comprobar si existe
+   `50_documentacion/activa/50_ordenacion_repositorio.md`. Si **no** existe,
+   el proyecto no ha pasado la ordenación de la política v5.5 y el pendiente
+   está vigente: declararlo en el acuse (Fase B, "Vigentes que condicionan
+   esta sesión") en una línea, con el resultado de
+   `ls 50_documentacion/traspasos/*.md | wc -l` como evidencia, y ofrecerlo
+   en la ruta de desarrollo (Fase C) como prioridad propuesta. **No se
+   ejecuta dentro de la sesión sin aprobación explícita** ni desplaza el foco
+   que el traspaso fijó: es una propuesta, no una interrupción. El protocolo
+   está en §4.7. Si el archivo existe, no se menciona.
 5. **Ejecutar la auditoría de apertura** (política, sección 5.6, preguntas
    marcadas "Apertura") y anotar hallazgos. Sin cambio.
 
@@ -313,19 +411,70 @@ indica [X]; lo que propones [riesgo]. ¿Procedemos o ajustamos?"
 - **Bugs: causa raíz antes de corregir.** Diagnosticar, documentar,
   verificar si es un caso conocido del traspaso, y solo entonces
   corregir, verificando no romper otra cosa.
+  - *Escalada objetiva tras tres fixes fallidos.* Si tres intentos de
+    corrección fallan y cada uno destapa un problema nuevo en otro lugar
+    (nuevo síntoma, nuevo acoplamiento, nuevo estado compartido), la
+    señal no es "un cuarto fix": es que la arquitectura puede estar mal.
+    Detenerse y reportar "la arquitectura puede estar mal" con la
+    evidencia de los tres intentos, en vez de seguir parchando. Este
+    corte SÍ activa la excepción de autonomía (POLITICA 0.3): es una
+    decisión estratégica del titular, no un refactor menor que se
+    resuelve en silencio.
+  - *Instrumentación por frontera antes de adivinar.* En pipelines
+    multi-etapa (flujo `20→30→40`, o migraciones con fases) donde el
+    error cruza varias capas, antes de proponer fixes loguear qué entra
+    y qué sale en cada frontera entre componentes (qué recibe cada
+    script/estación, qué entrega, si la configuración y el entorno se
+    propagan). Correr una vez para localizar en qué capa se rompe con
+    evidencia, y solo entonces investigar esa capa; no adivinar cuál
+    falla ni parchar la primera sospecha.
+  - *Recepción de correcciones del titular.* Ante una corrección del
+    titular, verificar contra el estado real antes de aplicarla; no
+    responder con agrado performativo, actuar directamente.
 - **La política es contrato, no sugerencia.** Desviaciones se
   documentan como deuda heredada y se proponen como pendiente.
-- **Toda afirmación de hecho lleva su fuente primaria.** Cualquier
-  afirmación sobre el estado del proyecto (existencia, ubicación o
-  contenido de un archivo; dominio de valores de un campo; firma de una
-  función; estado del CI o del repo) se acompaña, en la misma oración, de
-  la fuente primaria consultada en esta sesión ("(fuente: leído
-  `00_run_all.R`)", "(fuente: `git ls-files`)"). Un nombre de archivo o
-  campo, un documento normativo, la memoria o un adjunto sin validar NO
-  son fuente primaria: lo que solo se apoya en ellos se redacta como
-  hipótesis y se verifica antes de actuar. Esta regla generaliza y
-  reemplaza las formulaciones por caso acumuladas en proyectos
-  individuales.
+- **Marcador de fuente en línea (S-01).** Cuatro tipos de afirmación, y
+  solo esos cuatro, llevan marcador **en la misma línea en que se emiten**,
+  sin tercera forma legal:
+  1. contenido, existencia o ruta de un archivo no leído en esta sesión
+     (incluida la ruta canónica de un documento normativo);
+  2. estado de repositorio (rama, staging, commit, push, salida de
+     `git status`);
+  3. toda cifra o conteo comunicado;
+  4. toda premisa de hecho de un encargo.
+  Formas legales del marcador, sin excepción: `(fuente: <archivo leído o
+  comando ejecutado EN ESTA SESIÓN>)` o `(hipótesis, verificar con:
+  <comando>)`. Las cifras solo admiten como fuente un recuento
+  programático del mismo turno: la aritmética manual, la cifra heredada de
+  un documento previo y la memoria no son fuente. Un nombre de archivo o
+  de campo, un documento normativo citado sin abrir y un adjunto sin
+  validar tampoco lo son. Fuera de esos cuatro tipos el marcador es
+  opcional.
+  - *Por qué es un contrato de formato y no un recordatorio:* la
+    formulación anterior de esta regla ("toda afirmación de hecho lleva su
+    fuente primaria") estuvo vigente durante los 146 registros de PAT-01
+    del corpus, el 43,5% de las desviaciones de la cartera. Un marcador
+    ausente es visible en la propia línea del texto entregado; un
+    recordatorio se invoca al recordarlo, y el fallo ocurre antes, al
+    emitir. El slot no reemplaza el criterio: hace observable su omisión.
+  - *Relación con la regla de estructura de esta misma sección:* aquella
+    obliga a inspeccionar la forma de un objeto antes de escribir contra
+    ella; esta obliga a declarar la fuente de lo que se afirma. No compiten
+    ni se subsumen: una afirmación sobre la `cfg` de un paquete necesita
+    ambas, la inspección y el marcador que la cita.
+  - *El marcador no cuenta contra las reglas de brevedad de esta misma
+    sección ni contra ningún tope de forma.* Es parte de la afirmación, no
+    prosa adicional. Recortarlo para caber es la falla que la regla existe
+    para impedir, y tiene su propio patrón catalogado (PAT-09, optimizar
+    costo por encima de la regla).
+  - *Alcance acotado, no universal:* la extensión a "toda afirmación
+    verificable" se evaluó contra el corpus y se descartó (backtest,
+    2026-07-25). El 81,1% de los registros que la versión acotada no cubre
+    cae fuera de los cuatro tipos porque no son afirmaciones (edición de
+    código, forma del output, diseño de encargo): la versión universal no
+    capturaría ninguno de ellos y sí agregaría ruido a los que sí cubre.
+    Esa familia de errores de forma del output queda declarada sin
+    salvaguarda y es materia del piloto.
 - **Generar, verificar, consumar: en ese orden.** Todo bloque de
   comandos o encargo que genere o modifique un artefacto y luego lo
   consuma (commit, push, entrega, cifra comunicada) intercala entre ambos
@@ -360,6 +509,55 @@ indica [X]; lo que propones [riesgo]. ¿Procedemos o ajustamos?"
   y con su destino declarado en la misma entrega, con la forma
   "→ destino: `<ruta completa desde la raíz>`". El contenido efímero
   (explicaciones, cálculos puntuales) no obliga a materializar.
+  - *Corolario (GR-06b), añadido tras ERR-52-02.* Pegar el contenido en el
+    chat y pedir al titular que cree, pegue, reemplace o ensamble el
+    archivo **es una violación de esta regla, no un atajo**. La distinción
+    operativa: el trabajo mecánico manual (mover, descargar, arrastrar) es
+    del titular; la **autoría** del artefacto es del asistente, y la
+    autoría termina en un archivo, no en un bloque de código. Predicado
+    observable: si el turno está por escribir "reemplaza el bloque X por
+    esto", detenerse y producir el archivo completo. Aplica también a
+    ediciones de los propios archivos de gobernanza.
+
+- **Brevedad por forma, no por cantidad.** Los topes por palabras no
+  operan: no se cuentan palabras mientras se escribe. Los siguientes son
+  verificables mirando el borrador antes de enviarlo.
+  - *Forma por defecto:* **3 líneas de prosa.** No "unas tres": tres. Si la
+    respuesta cabe en una línea, va en una línea.
+  - *Topes duros por tipo* (solo prosa; código, tablas y archivos exentos):
+    pregunta directa → 3 líneas; diagnóstico de error → 2 de causa + 1 de
+    arreglo; reporte de tarea ejecutada → 4 líneas más la tabla o el
+    archivo; alternativas → 1 línea por opción más la `Recomendación:`;
+    todo lo demás → 6 líneas.
+  - *Habilitación para superar el tope:* pedido explícito del titular
+    ("detalla", "explícame", "por qué") en el mensaje **inmediatamente
+    anterior**. Jamás inferido del tema. "Es un asunto complejo" no
+    habilita.
+  - *Construcciones prohibidas:* dos párrafos de prosa seguidos; un párrafo
+    que anuncia lo que dirá el siguiente; repetir la pregunta antes de
+    responderla; justificar lo que nadie cuestionó; anticipar objeciones no
+    formuladas; recapitular lo ya dicho en la sesión; toda oración
+    borrable sin pérdida de información; resumen de cierre de algo ya
+    visible arriba.
+  - *Qué previene:* la extensión se siente rigor al escribirla y se lee
+    ruido al recibirla. La verborrea no es sinónimo de rigurosidad,
+    inteligencia ni efectividad, y el titular jamás pidió *aparentar*
+    rigor. Un párrafo agregado para parecer completo es exactamente el que
+    sobra.
+
+- **Fuente primaria de una ESTRUCTURA es su inspección, no su
+  descripción.** Antes de escribir el primer campo de una estructura de
+  datos que consume un componente externo (la `cfg` de un paquete, el
+  esquema de un archivo, el retorno de una función), la sesión debe
+  contener la **salida de una inspección** de esa estructura (`str()`,
+  `names()`, `args()`, esquema). Si no la contiene, el primer entregable de
+  la tarea es el comando que la produce.
+  - Un documento normativo que **describe** la estructura (esta misma
+    §4.6, un README, una especificación) es fuente primaria del
+    **protocolo**, no de la **forma del objeto**. Conocer la firma de una
+    función no es conocer la forma de lo que recibe.
+  - Los insumos de entorno se piden **completos en un solo mensaje**:
+    versión, firma **y** esquema. Nunca solo la firma.
 
 #### 1.2.7 Registro continuo para el cierre
 
@@ -431,7 +629,8 @@ aplica); planes no anclados en insumos reales.
 ### 2.1 Generación
 
 Al cerrar una sesión CONTINUATION o NEW PROJECT, generar
-`traspaso_cierre_vNN.md` (correlativo global, dos dígitos; snake_case
+`traspaso_cierre_vNN.md` (correlativo global; dos dígitos hasta v99, tres
+desde v100; snake_case
 según la política, sección 2; unifica la grafía antigua con guiones)
 en `50_documentacion/traspasos/`. El traspaso es el **único puente**
 entre sesiones: todo lo que no quede ahí, se pierde. Antes de cerrar:
@@ -459,6 +658,32 @@ por su vacío y son obligatorias incluso vacías, porque su vacío es una
 afirmación verificable: Bugs de la sesión (2.2 punto 6), la auditoría de
 cierre (dentro de 2.2 punto 11) y la tabla de errores del asistente
 (2.2.15).
+
+**Archivado del traspaso anterior (POLITICA 1.3.1) — paso obligatorio.**
+`50_documentacion/traspasos/` contiene **un solo** archivo: el vigente.
+Antes de depositar el traspaso nuevo, mover el anterior:
+
+```bash
+cd <raiz_del_proyecto> && \
+  mkdir -p 50_documentacion/traspasos/archivo && \
+  git mv 50_documentacion/traspasos/traspaso_cierre_v<NN-1>.md \
+         50_documentacion/traspasos/archivo/
+```
+
+`git mv` siempre, nunca `cp` + `rm`: el historial de cada traspaso debe
+seguir siendo rastreable con `git log --follow`. Nada se borra jamás de
+`archivo/`.
+
+**Comprobación de cierre**, junto con las demás:
+
+```bash
+cd <raiz_del_proyecto> && \
+  n=$(ls 50_documentacion/traspasos/*.md | wc -l | tr -d ' ') && \
+  echo "vigentes=$n" && [ "$n" = "1" ] || { echo "FALLA: cierre a medias"; exit 1; }
+```
+
+Si el proyecto todavía tiene todos sus traspasos planos, migrarlos a
+`archivo/` es parte de ESTE cierre, no un pendiente que se hereda.
 
 **Chequeo de cierre del backlog (2.2.5):** si este es el segundo cierre o
 posterior y el backlog aún vive embebido en el traspaso, o en un archivo
@@ -715,18 +940,23 @@ código diluiría esa comparabilidad.
 | `regla_violada` | Documento + sección exacta de la regla que existía y no se siguió (p.ej. "userPreferences, edición de archivos: entregar completo, no fragmentos") |
 | `causa_raiz` | Por qué ocurrió pese a que la regla estaba disponible (nunca "no lo sabía": la regla existía; el análisis es de por qué no se aplicó en el momento) |
 | `salvaguarda_presente` | Qué documento(s) ya contenían la regla violada (POLITICA / SETTINGS / CLAUDE.md / userPreferences / más de uno) |
-| `patron` | Etiqueta `PAT-NN` del catálogo canónico (`herramientas_dev/gobernanza/catalogo_patrones_errores_vN.md`) más el matiz libre ("PAT-01, sobre firma de función"). "Nuevo" se reserva para mecanismos que ningún `PAT-NN` cubre, y obliga a proponer la entrada nueva del catálogo en el mismo traspaso |
+| `patron` | Etiqueta `PAT-NN` del catálogo canónico (`herramientas_dev/gobernanza/catalogo_patrones_errores_v2.md`) más el matiz libre ("PAT-01, sobre firma de función"). Conjunto válido vigente: `PAT-01` a `PAT-12`. "Nuevo" se reserva para mecanismos que ningún `PAT-NN` cubre, se escribe `PAT-NUEVO-<slug>` y obliga a proponer la entrada nueva del catálogo en el mismo traspaso |
+| `gatillo_observable` | El predicado que era observable en el momento del error, escrito como condición verificable y no como narración. Empieza con una etiqueta del vocabulario controlado, dos puntos, y la precisión libre del caso. Vocabulario: `afirmar-sin-leer`, `estado-git`, `cifras-datos`, `encargos-premisas`, `ausencia-adjuntos`, `comando-entorno`, `restriccion-no-propagada`, `confirmacion-redundante`, `entrega-sin-destino-o-nombre`, `costo-sobre-regla`, `iteracion-sin-criterio`, `otro`. Existe para que los grupos de gatillo sean un campo del registro y no una reconstrucción por expresión regular sobre prosa libre (el catálogo v2 documenta esa brecha en PAT-01) |
+| `intentos_previos` | Número de intentos fallidos contra el mismo objetivo antes del error (`0` si ocurrió al primer intento), más una frase de qué falló en cada uno. Es el dato que el retrospectivo no tenía y sin el cual las salvaguardas de escalada (dos fallos, segundo rechazo) no son medibles |
+| `costo` | Consecuencia real en unidad observable (turnos perdidos, ciclos de copy-paste, artefactos rehechos, fases detenidas, cifra publicada incorrecta) o `ninguno`. Nunca adjetivos. Existe porque la frecuencia sola no ordena las salvaguardas: hay patrones de un registro con costo alto por evento y patrones frecuentes de costo bajo |
 
 **Regla de registro:** el error se anota en el momento en que se
 identifica dentro de la sesión (no se reconstruye de memoria al cerrar).
 Si la sesión no llega a un cierre formal, el registro provisional debe
 quedar localizable en el historial de la conversación.
 
-**Regla de formato:** la tabla usa los siete campos fijos sin excepción,
-en cualquiera de los layouts equivalentes (tabla de 7 columnas, tabla
-transpuesta o bloque campo/contenido por error). Omitir campos o sustituir
-la tabla por un formato propio degrada la comparabilidad entre proyectos,
-que es el propósito de esta sección.
+**Regla de formato:** la tabla usa los **diez** campos fijos sin excepción,
+en cualquiera de los layouts equivalentes (tabla de diez columnas, tabla
+transpuesta o bloque campo/contenido por error). Omitir campos o sustituir la
+tabla por un formato propio degrada la comparabilidad entre proyectos, que es
+el propósito de esta sección. Los registros anteriores a esta versión con
+siete campos siguen siendo válidos y no se re-registran: la ampliación rige
+hacia adelante.
 
 **Consumo entre proyectos:** esta tabla es, junto al backlog, uno de los
 pocos artefactos pensados explícitamente para análisis CRUZADO entre los
@@ -736,6 +966,61 @@ BIBLIOTECA dedicada) se detecta que el mismo `patron` aparece en tablas de
 errores de 2 o más proyectos, eso es evidencia de que la salvaguarda
 actual (la regla tal como está escrita) no es suficiente y debe
 reformularse, no solo repetirse con más énfasis.
+
+#### 2.2.16 Validación empírica antes de reformular una regla reincidente
+
+Cuando §2.2.15 dispara ("el mismo `patron` aparece en tablas de errores
+de 2 o más proyectos"), la regla violada debe reformularse, no repetirse
+con más énfasis. Pero **antes de reescribirla**, clasificar de qué tipo
+de falla se trata: la forma de la corrección depende del tipo de falla, y
+elegir mal la forma es lo que hace que una regla reincida pese a
+reformularse. En particular, endurecer una prohibición es la herramienta
+correcta solo cuando la falla es de disciplina; si la falla es de forma
+del output, de omisión o de condición ambigua, una prohibición más
+enfática no corrige y a veces empeora (bajo un incentivo en competencia,
+el asistente "negocia" con el "no X").
+
+**Tabla de clasificación (cuatro categorías, elegir una):**
+
+| Tipo de falla | Cómo se reconoce | Forma correcta del arreglo |
+|---|---|---|
+| **Disciplina** | El asistente conocía la regla y la saltó bajo presión (prisa, costo hundido, "solo esta vez") | Prohibición explícita + tabla de racionalizaciones + lista de red flags |
+| **Forma del output** | El asistente cumplió, pero el producto salió con forma equivocada (fragmento en vez de archivo completo, cifra sin recuento, veredicto enterrado) | Receta positiva o contrato: declarar qué ES el output correcto, sus partes y su orden |
+| **Omisión** | Falta un elemento de algo que el asistente ya produce (campo ausente de una tabla o plantilla) | Campo/slot obligatorio en la plantilla que rellena, no un recordatorio en prosa |
+| **Condición ambigua** | La conducta correcta dependía de una condición que la regla no ató a un disparador observable | Condicional explícito sobre un predicado observable ("si existe X, entonces Y") |
+
+**Regla de elección:** una prohibición NO es la herramienta correcta si
+la falla es de forma, de omisión o de condición, aunque el patrón
+reincida. Reformular en la forma equivocada (más prohibición para una
+falla de forma) cuenta como reformulación fallida y se registra como tal
+en el próximo ciclo. La reformulación elegida se documenta junto al
+`patron` correspondiente, nombrando la categoría usada.
+
+**Alcance de esta subsección:** cubre la *elección de la forma* de la
+regla reformulada. La validación de que la nueva redacción efectivamente
+cambia la conducta (micro-test empírico contra un control sin la regla)
+queda fuera de alcance por ahora: requiere infraestructura de testing de
+prompts que hoy no existe en `herramientas_dev`. Cuando esa
+infraestructura exista, esta subsección es el punto natural de enganche.
+
+#### 2.2.17 Registro de fricciones (una línea, sin tabla)
+
+Una **fricción** es una molestia expresada por el titular que no llega a
+desviación de regla canónica: verbosidad sobre el techo de prosa, un matiz no
+pedido, una pregunta de más, un formato que obligó a releer. No entra a la
+tabla de §2.2.15 (no hay regla violada que citar) y hoy no deja rastro
+alguno, lo que subregistra el problema: el catálogo v2 clasifica PAT-08
+(verbosidad) con 5 registros formales y declara ese número como artefacto del
+subregistro, no como frecuencia real.
+
+**Forma:** una línea por fricción en el traspaso, en su propia sección al
+final de §2.2.15, con el formato `friccion: <qué molestó> → <qué se ajustó>`.
+Sin tabla, sin campos, sin análisis. El costo de registrar debe ser menor que
+el costo de la fricción, o no se registra.
+
+**Para qué:** una fricción que reaparece en dos o más proyectos se promueve a
+patrón con entrada de catálogo, y recién ahí recibe el tratamiento de
+§2.2.16. Antes de eso no se legisla sobre ella.
 
 ### 2.3 Reglas de redacción del traspaso
 
@@ -1089,3 +1374,122 @@ suitedoc::generar_suite(
 )
 # Requiere npm + red en tiempo de generación (descarga lucide-static fijado).
 ```
+
+### 4.7 Ordenación del repositorio
+
+Pone el árbol de un proyecto al día con la política v5.5. **No toca el
+pipeline:** mueve, renombra y archiva documentación. Nada se borra: todo lo
+que sale del árbol vivo va a `_archivo/YYYYMMDD/` conservando su ruta
+relativa (política 1.5). El protocolo se ejecuta una vez por proyecto; el
+mantenimiento posterior lo hace el cierre de sesión (§2.1, `vigentes=1`).
+
+**Cuándo aplica.** Cuando el gatillo de §1.2.2 punto 4bis se enciende (no
+existe `50_documentacion/activa/50_ordenacion_repositorio.md`) y el usuario
+aprueba abordarlo. También bajo demanda, invocando "ordenación del
+repositorio".
+
+**Tipo de sesión.** Se ejecuta como tarea dentro de una CONTINUATION del
+propio proyecto, no como sesión aparte: necesita el traspaso leído para saber
+qué documento está superado y cuál no.
+
+**Reparto de instancias.** El asistente conversacional redacta el encargo y
+decide los grados de certeza; Claude Code ejecuta los movimientos, los greps
+y los commits. El asistente no propone que el usuario mueva archivos a mano.
+
+#### 4.7.1 Precondiciones bloqueantes
+
+Se verifican **antes de tocar nada**. Si alguna falla, detenerse y reportar;
+no se "resuelve de paso".
+
+```bash
+cd <raiz_proyecto>
+git status --porcelain            # debe salir vacío (índice y árbol limpios)
+git stash list                    # debe salir vacío
+git rev-list --left-right --count @{u}...HEAD   # debe ser "0	0"
+git rev-parse --abbrev-ref HEAD   # NO debe ser main/master
+```
+
+Rama de trabajo propia: `ordenacion/<AAAAMMDD>`. El merge lo decide el
+titular; el protocolo termina en PR, nunca en merge.
+
+#### 4.7.2 Alcance (cuatro bloques, un commit por bloque)
+
+**Bloque 1 — Traspasos.** `50_documentacion/traspasos/` queda con un solo
+archivo, el de la última sesión cerrada; el resto va a `traspasos/archivo/`
+con `git mv` (nunca `cp` + `rm`, que rompe `git log --follow`). Es la regla
+1.3.1 de la política v5.5 y el paso de cierre de §2.1 de este documento. Si
+la copia local de `POLITICA_PROYECTO.md` o de
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md` en `50_documentacion/activa/` es
+anterior a v5.5 / v14, actualizarla desde la knowledge base es parte de este
+bloque. Aserción de cierre: `ls 50_documentacion/traspasos/*.md` devuelve una
+línea.
+
+**Bloque 2 — Obsoletos y duplicados.** Proponer candidatos a
+`_archivo/YYYYMMDD/`: documentos superados por una versión posterior, specs
+de arquitecturas abandonadas, salidas regenerables, residuos de sesión. Cada
+candidato lleva **grado de certeza** declarado:
+
+| Grado | Criterio | Tratamiento |
+|---|---|---|
+| Alto | Existe la versión posterior en el árbol, o el traspaso declara la arquitectura abandonada | Se mueve |
+| Medio | Parece superado pero nada lo declara | Grep obligatorio antes de mover |
+| Bajo | Solo el nombre o la fecha lo sugieren | No se mueve; se lista como duda en el encargo |
+
+El grep de referencias vivas es `grep -rn --exclude-dir=_archivo
+--exclude-dir=.git "<nombre_archivo>" .`. **Si devuelve una referencia viva,
+la fila se cancela y se reporta**; no se mueve y no se "arregla la
+referencia" en el mismo paso. `andamios/` está congelado (política 1.2): sus
+archivos nunca son candidatos, y una referencia dentro de `andamios/` es
+registro histórico, no referencia viva (se anota, no cancela la fila).
+
+**Bloque 3 — Nomenclatura.** Los archivos de las subcarpetas de `50_*` llevan
+el prefijo de su decena, en minúsculas y snake_case (política §2). **Antes de
+renombrar cualquier archivo, grep de su nombre en `POLITICA_PROYECTO.md` y en
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md`.** Si aparece fijado por nombre, no se
+renombra, por muy fuera de patrón que se vea: su nombre es un contrato que
+excede al proyecto. Las excepciones ya declaradas por la política (`ESTADO.md`,
+`gobernanza_datos.md`, `backlog_acumulativo.md`, `POLITICA_PROYECTO.md`,
+`SETTINGS_Y_PROMPTS_OPERACIONALES.md`) se dan por verificadas; el grep cubre
+las no anticipadas. Origen de la regla: sesión v103 de
+`slep_aprendizajes_ep`, donde el renombre de `ESTADO.md` se ejecutó y hubo que
+revertirlo. Todo renombre que sí proceda **actualiza sus referencias en el
+mismo commit**.
+
+**Bloque 4 — Escáner.** Verificar que `00_escanear_proyecto.R` excluya del
+barrido `node_modules/`, `packrat/` y `venv/` (política §7.2). Si no lo hace,
+los totales que declaran los traspasos están midiendo una dependencia y no el
+proyecto: corregir el script y declarar en el manifiesto el total antes y
+después.
+
+#### 4.7.3 Entrega
+
+1. **Encargo previo** en `50_documentacion/andamios/`, con la lista concreta
+   de movimientos y el grado de certeza de cada uno. Se entrega y se aprueba
+   **antes** de ejecutar.
+2. **Manifiesto** con hashes (`git hash-object`) de cada archivo movido,
+   origen y destino.
+3. **Log de greps** con el resultado de cada uno, **incluidas las filas
+   canceladas**. Una ejecución sin filas canceladas no es una ejecución
+   limpia por definición: si no hubo ninguna, se declara.
+4. **Commits selectivos**, uno por bloque, con rutas explícitas. Nunca
+   `git add -A` ni `git add .`.
+5. **Grep de privacidad y de coautoría** antes de cada commit de
+   documentación (política §6): sin RUT, sin nombres de personas, sin
+   atribución de coautoría a la herramienta.
+6. **Escáner al final** y **PR**. El merge lo decide el titular.
+7. **Marcador:** el último commit crea
+   `50_documentacion/activa/50_ordenacion_repositorio.md` con la fecha, la
+   rama, el hash del PR y el conteo de archivos movidos por bloque. Ese
+   archivo apaga el gatillo de §1.2.2 punto 4bis. Sin él, la ordenación se
+   volvería a proponer en cada apertura.
+
+#### 4.7.4 Prohibido
+
+- Borrar cualquier archivo (todo va a `_archivo/`).
+- `cp` + `rm` donde corresponde `git mv`.
+- Mover un candidato de grado medio o bajo sin grep previo.
+- Renombrar un archivo citado por nombre en la política o en este documento.
+- Tocar `30_procesamiento/` o cualquier script del pipeline.
+- Reescribir rutas dentro de `andamios/` (política 1.2).
+- Mezclar la ordenación con cambios de contenido: un cambio conceptual por
+  intervención.
