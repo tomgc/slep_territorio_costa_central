@@ -297,6 +297,18 @@ select option:disabled { color: #b9b3a7; }
 }
 .censo-nota { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 10px; }
 
+/* ---- Capa de educacion parvularia ----
+   La leyenda muestra el SIMBOLO REAL (el anillo que se dibuja en el mapa), no un
+   cuadrito generico: misma regla que se aplico al hachurado del Censo. El anillo
+   se distingue del punto pleno de la leyenda de establecimientos por ser hueco. */
+.parvularia-switch { display: flex; align-items: center; gap: 9px; cursor: pointer;
+  font-size: 13.5px; color: var(--tinta); }
+.parvularia-switch input { width: 15px; height: 15px; accent-color: var(--azul-institucional);
+  cursor: pointer; flex: none; }
+#bloque-parvularia .leyenda:not(:empty) { margin-top: 12px; }
+.ly-anillo { width: 13px; height: 13px; border-radius: 50%; flex: none;
+  border: 2.2px solid currentColor; background: #ffffff; box-sizing: border-box; }
+
 /* Indicador de carga de las capas del Censo (426/421 KB en vuelo != pantalla congelada) */
 .censo-cargando {
   position: absolute; z-index: 950; left: 50%; top: 16px; transform: translateX(-50%);

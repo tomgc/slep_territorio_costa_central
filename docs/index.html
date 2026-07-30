@@ -66,6 +66,19 @@
       <p class="censo-nota" id="censo-nota"></p>
     </section>
 
+    <!-- Capa de educacion parvularia (pendiente N, fase 1). Toggle propio e
+         INDEPENDIENTE del selector del Censo: no son mutuamente excluyentes.
+         Apagado por defecto; el dato se descarga al primer encendido. -->
+    <section class="bloque" id="bloque-parvularia">
+      <h2>Educación parvularia</h2>
+      <label class="parvularia-switch" for="parvularia-toggle">
+        <input type="checkbox" id="parvularia-toggle">
+        <span>Mostrar jardines y salas cuna</span>
+      </label>
+      <div id="parvularia-leyenda" class="leyenda"></div>
+      <p class="censo-nota" id="parvularia-nota"></p>
+    </section>
+
     <section class="bloque">
       <h2>Leyenda</h2>
       <div id="leyenda" class="leyenda"></div>

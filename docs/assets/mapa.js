@@ -1044,6 +1044,154 @@ function iniciarCenso() {
   leyendaCenso();
 }
 
+/* =============================================================================
+   CAPA DE EDUCACION PARVULARIA (pendiente N, fase 1) — jardines y salas cuna.
+   - Toggle PROPIO e INDEPENDIENTE de las capas del Censo: se pueden encender a
+     la vez. Apagado por defecto, carga diferida y cacheada (mismo patron del
+     hito 4; ver activarCenso).
+   - Pane 'parvularia' zIndex 390: BAJO los pines del directorio (400) y SOBRE
+     la frontera (370). Los pines vigentes siguen mandando.
+   - Marcador deliberadamente SECUNDARIO: anillo (disco hueco) de radio menor,
+     contra el disco pleno con aro blanco de los establecimientos escolares. La
+     diferencia es de FORMA, no solo de tamaño: se distingue un jardin de una
+     escuela sin leer la leyenda.
+   - Fuente: docs/data/parvularia_r5.geojson (30_procesamiento/39_*, agregado
+     por unidad; sin ninguna fila de persona).
+   ============================================================================= */
+const PARVULARIA_URL = 'data/parvularia_r5.geojson';
+/* ---- COLOR — PROPUESTA, NO APROBADA ----------------------------------------
+   Para TIPO_ESTAB 1-4 se REUSAN las constantes ya vigentes del mapa (PAL_DEP y
+   COLOR_INSTITUCIONAL): un jardin municipal y una escuela municipal comparten
+   color, que es lo que hace legible la capa junto a los pines.
+   JUNJI (5, 6) e INTEGRA (7, 8) no tienen constante previa porque no existen en
+   el directorio escolar. Los dos tonos de abajo son una PROPUESTA a decidir por
+   el titular; viven aqui, en un solo lugar, para cambiarse en una linea.
+   Criterio de la propuesta: la paleta vigente ocupa verde (#496524), ocre
+   (#A6741C), violeta (#7A4A8A) y toda la banda azul-cian-turquesa de los SLEP.
+   Quedan libres el rojo-naranja y el carmin, que es de donde se toman. */
+const COLOR_PROPUESTO_JUNJI   = '#C2552F';   // terracota: banda rojo-naranja, libre en la paleta
+const COLOR_PROPUESTO_INTEGRA = '#A32C58';   // carmin: mas rojo y mas oscuro que el violeta #7A4A8A
+const COLOR_PARVULARIA = {
+  1: PAL_DEP['Municipal'],                    // Escuela Municipal
+  2: PAL_DEP['Particular Subvencionado'],     // Escuela Particular Subvencionado
+  3: PAL_DEP['Particular Pagado'],            // Escuela Particular Pagado
+  4: COLOR_INSTITUCIONAL,                     // Escuela Servicio Local de Educacion
+  5: COLOR_PROPUESTO_JUNJI,                   // JUNJI Administracion Directa
+  6: COLOR_PROPUESTO_JUNJI,                   // JUNJI VTF
+  7: COLOR_PROPUESTO_INTEGRA,                 // INTEGRA Administracion Directa
+  8: COLOR_PROPUESTO_INTEGRA                  // INTEGRA CAD
+};
+// Agrupacion de la leyenda: el color codifica INSTITUCION, no subtipo.
+const GRUPOS_PARVULARIA = [
+  { tipos: [1], color: COLOR_PARVULARIA[1], etq: 'Escuela municipal' },
+  { tipos: [2], color: COLOR_PARVULARIA[2], etq: 'Escuela particular subvencionada' },
+  { tipos: [3], color: COLOR_PARVULARIA[3], etq: 'Escuela particular pagada' },
+  { tipos: [4], color: COLOR_PARVULARIA[4], etq: 'Escuela Servicio Local de Educación' },
+  { tipos: [5, 6], color: COLOR_PARVULARIA[5], etq: 'JUNJI (administración directa y VTF)' },
+  { tipos: [7, 8], color: COLOR_PARVULARIA[7], etq: 'INTEGRA (administración directa y CAD)' }
+];
+const GROSOR_ANILLO_PARV = 2.2;   // el anillo se lee por su borde, no por su relleno
+// Centro BLANCO, no teñido: con un relleno traslucido del mismo color el agujero
+// medía ~1,5 px a radio 3,9 y el anillo volvia a leerse como un disco palido, que
+// es justo lo que hay que evitar. El blanco abre el centro de verdad y ademas
+// reusa el aro blanco que ya llevan los pines: se mantiene en la misma familia.
+const COLOR_CENTRO_ANILLO_PARV = '#ffffff';
+const OPACIDAD_CENTRO_PARV = 0.92;
+// Radio SIEMPRE menor que el del pin vigente (radioBase), para que la jerarquia
+// no dependa del zoom: los establecimientos escolares son el objeto principal.
+function radioParvularia() { return Math.max(2.4, radioBase(S.zoomActual) - 1.6); }
+
+function estiloParvularia(f) {
+  const c = COLOR_PARVULARIA[f.properties.tipo_estab] || '#888';
+  return { radius: radioParvularia(), color: c, weight: GROSOR_ANILLO_PARV,
+           opacity: 0.95, fill: true, fillColor: COLOR_CENTRO_ANILLO_PARV,
+           fillOpacity: OPACIDAD_CENTRO_PARV };
+}
+
+function popupParvularia(p) {
+  // El desglose por nivel se OMITE linea a linea: cuando el dato no existe (null:
+  // un origen que no lo trae) y tambien cuando es cero (la unidad no imparte ese
+  // nivel). Nunca se muestra "NA" ni un cero. No se oculta nada al hacerlo: la
+  // cifra de arriba es el total, y la guardia del script 39 garantiza que los tres
+  // niveles suman ese total, asi que con total > 0 siempre queda al menos una linea.
+  // Hoy los tres origenes traen el desglose (NIVEL2, 0 NA medido), pero la omision
+  // no es rama muerta: el dia que un origen deje de traerlo, el popup calla.
+  const nivel = (et, v) => (v == null || v === 0 ? '' :
+    `<div>${et}</div><div class="val">${fmt(v)}</div>`);
+  const filas = nivel('Sala cuna', p.mat_sala_cuna) +
+                nivel('Medio', p.mat_medio) +
+                nivel('Transición', p.mat_transicion);
+  return `<div class="pp pp-parv">
+    <div class="pp-nombre">${titulo(p.nombre)}</div>
+    <div class="pp-sub">${p.tipo_glosa} · ${titulo(p.comuna)}</div>
+    <div class="pp-parv-total">
+      <span class="pp-parv-cifra">${fmt(p.matricula_total)}</span>
+      <span class="pp-parv-etq">niños matriculados (2025)</span>
+    </div>
+    ${filas ? `<div class="pp-censo-tabla">${filas}</div>` : ''}
+  </div>`;
+}
+
+function leyendaParvularia() {
+  const el = document.getElementById('parvularia-leyenda');
+  const nota = document.getElementById('parvularia-nota');
+  if (!S.parvularia.activa) { el.innerHTML = ''; nota.textContent = ''; return; }
+  // La leyenda muestra el SIMBOLO REAL (el anillo), no un cuadrito generico:
+  // misma regla que se aplico al hachurado del Censo.
+  el.innerHTML = GRUPOS_PARVULARIA.map(g =>
+    `<div class="leyenda-item"><span class="ly-anillo" style="border-color:${g.color}"` +
+    `></span>${g.etq}</div>`).join('');
+  nota.textContent = 'Educación parvularia 2025 (MINEDUC, JUNJI e INTEGRA), región continental. ' +
+    'Una marca por unidad educativa; el anillo la distingue del pin de establecimiento escolar.';
+}
+
+async function activarParvularia(encender) {
+  S.parvularia.activa = encender;
+  const cb = document.getElementById('parvularia-toggle');
+  if (cb) cb.checked = encender;
+  leyendaParvularia();
+
+  if (!encender) {
+    if (S.parvularia.capa) { S.mapa.removeLayer(S.parvularia.capa); S.parvularia.capa = null; }
+    return;
+  }
+  let data = S.parvularia.cache;
+  if (!data) {
+    indicadorCargaCenso(true);
+    try { data = await fetch(PARVULARIA_URL).then(r => r.json()); S.parvularia.cache = data; }
+    catch (e) {
+      indicadorCargaCenso(false);
+      document.getElementById('parvularia-nota').textContent =
+        'No se pudo cargar la capa de educación parvularia.';
+      S.parvularia.activa = false;
+      if (cb) cb.checked = false;
+      return;
+    }
+    indicadorCargaCenso(false);
+  }
+  // si el usuario apago mientras cargaba, no montar
+  if (!S.parvularia.activa) return;
+  S.parvularia.capa = L.geoJSON(data, {
+    pane: 'parvularia', renderer: S.parvularia.renderer,
+    // OJO: las capas que devuelve pointToLayer NO heredan `pane` ni `renderer`
+    // del L.geoJSON: hay que pasarlos en las opciones del propio circleMarker o
+    // los marcadores caen en el overlayPane (400), mezclados con los pines del
+    // directorio, y el orden z que este bloque promete deja de cumplirse.
+    pointToLayer: (f, latlng) => L.circleMarker(latlng, Object.assign(
+      { pane: 'parvularia', renderer: S.parvularia.renderer }, estiloParvularia(f))),
+    onEachFeature: (f, capa) => capa.bindPopup(() => popupParvularia(f.properties),
+      { maxWidth: 320, autoPanPadding: [30, 30] })
+  }).addTo(S.mapa);
+}
+
+function iniciarParvularia() {
+  S.parvularia = { activa: false, cache: null, capa: null,
+                   renderer: L.canvas({ pane: 'parvularia', tolerance: TOLERANCIA_HOVER }) };
+  const cb = document.getElementById('parvularia-toggle');
+  if (cb) cb.addEventListener('change', e => activarParvularia(e.target.checked));
+  leyendaParvularia();
+}
+
 async function iniciar() {
   const [geo, meta, frontera, fronteraRegion, rotulosComuna] = await Promise.all([
     fetch('data/establecimientos.geojson').then(r => r.json()),
@@ -1091,6 +1239,10 @@ async function iniciar() {
     // frontera bajo los pins, sobre los rotulos
     mapa.createPane('frontera');
     mapa.getPane('frontera').style.zIndex = 370;
+    // pane de parvularia: SOBRE la frontera (370) y BAJO los pines del
+    // directorio (400). Es una capa complementaria, no el objeto principal.
+    mapa.createPane('parvularia');
+    mapa.getPane('parvularia').style.zIndex = 390;
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/">CARTO</a>',
       subdomains: 'abcd', maxZoom: 19
@@ -1156,6 +1308,11 @@ async function iniciar() {
     const aplicarRadios = () => {
       S.zoomActual = mapa.getZoom();
       S.marcadores.forEach(m => { if (!m._tween) m.setStyle({ radius: radioDe(m._props) }); });
+      // La capa de parvularia sigue el mismo escalado por zoom: si no, a z14 el
+      // anillo quedaria del porte del pin y se perderia la jerarquia visual.
+      if (S.parvularia && S.parvularia.capa) {
+        S.parvularia.capa.eachLayer(m => m.setStyle({ radius: radioParvularia() }));
+      }
     };
     mapa.on('zoomend', aplicarRadios);
     aplicarRadios();
@@ -1163,6 +1320,7 @@ async function iniciar() {
     new ResizeObserver(() => mapa.invalidateSize()).observe(cont);
     iniciarFiltros();           // requiere marcadores ya creados
     iniciarCenso();             // capas del Censo (carga diferida)
+    iniciarParvularia();        // capa de parvularia (carga diferida, independiente)
     iniciarExportacion();
     window.__M = { mapa, S, F, aplicarFiltros, limpiarFiltros,
                    construirSVG, construirLibro, filasExportables,
