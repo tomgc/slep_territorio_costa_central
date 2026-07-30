@@ -1069,7 +1069,7 @@ const PARVULARIA_URL = 'data/parvularia_r5.geojson';
    Criterio de la propuesta: la paleta vigente ocupa verde (#496524), ocre
    (#A6741C), violeta (#7A4A8A) y toda la banda azul-cian-turquesa de los SLEP.
    Quedan libres el rojo-naranja y el carmin, que es de donde se toman. */
-const COLOR_PROPUESTO_JUNJI   = '#C2552F';   // terracota: banda rojo-naranja, libre en la paleta
+const COLOR_PROPUESTO_JUNJI   = '#9E3F1E';   // terracota oscurecido: +13,2 de L* sobre el ocre
 const COLOR_PROPUESTO_INTEGRA = '#A32C58';   // carmin: mas rojo y mas oscuro que el violeta #7A4A8A
 const COLOR_PARVULARIA = {
   1: PAL_DEP['Municipal'],                    // Escuela Municipal
