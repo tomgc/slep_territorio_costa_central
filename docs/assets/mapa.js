@@ -775,9 +775,49 @@ const CENSO_URL = { densidad: 'data/censo_manzanas_cc.geojson',
 // Rampa monocroma azul de BAJA saturacion (matiz fijo, luminosidad decreciente).
 const RAMPA_CENSO = ['#cdd8e4', '#a7bacf', '#7f9cba', '#5980a4', '#33628c'];
 const OPACIDAD_CENSO = 0.45;                 // maximo del relleno: es fondo, no compite
-const GRIS_CENSO_CERO = '#b0aaa0';           // densidad: sin poblacion en edad (fuera de escala)
-const GRIS_CENSO_RUIDOSO = '#9a9488';        // asistencia fiable=FALSE: denominador insuficiente
-const OPACIDAD_CENSO_GRIS = 0.42;
+const COLOR_SIN_POBLACION = '#b0aaa0';       // densidad: n_edad == 0 (dato real, fuera de escala)
+const OPACIDAD_SIN_POBLACION = 0.42;
+/* ---- Hachurado de "denominador insuficiente" (asistencia, fiable = FALSE) ----
+   Un relleno gris plano y el fondo de papel entre poligonos son tonos vecinos: el
+   lector no podia separar "hay dato, pero es ruidoso" de "no hay poligono aqui".
+   Son dos cosas distintas y necesitan dos tratamientos inequivocos, asi que el
+   plano se reemplaza por trama diagonal (convencion cartografica para dato
+   presente no confiable). Un patron nunca se confunde con un fondo liso.
+   La capa corre en Canvas: Canvas 2D acepta un CanvasPattern en `fillStyle`, y
+   Leaflet asigna `options.fillColor` a `fillStyle` sin transformarlo
+   (vendor/leaflet.js: `t.fillStyle=i.fillColor||i.color`). No hay que parchear el
+   renderer ni pasar la capa a SVG: la trama es un fillColor mas.
+   El ctx del renderer queda trasladado a coordenadas de capa
+   (`this._ctx.translate(-t.min.x,-t.min.y)`), asi que la trama queda anclada al
+   mapa, no a la pantalla: no se desliza al hacer pan. */
+const HACHURA = {
+  lado: 8,                                   // px CSS del mosaico: separacion 8/√2 = 5,7 px
+  grosor: 1.5,                               // px CSS de la linea
+  tinta: 'rgba(96,89,74,.60)',               // linea: lo que distingue es la TEXTURA, no el tono,
+                                             // asi que basta el contraste minimo que la deja leer
+                                             // sin que la trama le gane a la rampa (es fondo)
+  fondo: 'rgba(181,174,159,.22)'             // velo bajo la trama: da tono a los poligonos chicos
+};
+function crearPatronHachura() {
+  // Leaflet escala el ctx del canvas x2 en pantallas retina (factor FIJO 2, no dpr:
+  // `n=b.retina?2:1` ... `b.retina&&this._ctx.scale(2,2)`). El mosaico se dibuja a esa
+  // resolucion y el patron se contra-escala, para que mida `lado` px CSS en ambas.
+  const f = L.Browser.retina ? 2 : 1;
+  const t = HACHURA.lado * f;
+  const mosaico = document.createElement('canvas');
+  mosaico.width = t; mosaico.height = t;
+  const c = mosaico.getContext('2d');
+  c.fillStyle = HACHURA.fondo; c.fillRect(0, 0, t, t);
+  c.strokeStyle = HACHURA.tinta; c.lineWidth = HACHURA.grosor * f; c.lineCap = 'square';
+  c.beginPath();
+  c.moveTo(0, t); c.lineTo(t, 0);                          // diagonal "/" central (x+y = t)
+  c.moveTo(-t / 2, t / 2); c.lineTo(t / 2, -t / 2);        // empalme esquina sup-izq (x+y = 0)
+  c.moveTo(t / 2, t * 1.5); c.lineTo(t * 1.5, t / 2);      // empalme esquina inf-der (x+y = 2t)
+  c.stroke();
+  const patron = document.createElement('canvas').getContext('2d').createPattern(mosaico, 'repeat');
+  if (f !== 1) patron.setTransform({ a: 1 / f, b: 0, c: 0, d: 1 / f, e: 0, f: 0 });
+  return patron;
+}
 // Cortes = cuantiles 20/40/60/80 del conteo>0 (densidad) y de la proporcion
 // fiable (asistencia), medidos sobre el artefacto real. NO inventados.
 const CORTES_DENSIDAD = {
@@ -828,7 +868,7 @@ function rangosProp(cortes) {
 
 function estiloDensidad(f) {
   const v = f.properties[S.censo.tramo];
-  if (v === 0) return { stroke: false, fill: true, fillColor: GRIS_CENSO_CERO, fillOpacity: OPACIDAD_CENSO_GRIS };
+  if (v === 0) return { stroke: false, fill: true, fillColor: COLOR_SIN_POBLACION, fillOpacity: OPACIDAD_SIN_POBLACION };
   return { stroke: false, fill: true, fillColor: RAMPA_CENSO[clase(v, CORTES_DENSIDAD[S.censo.tramo])], fillOpacity: OPACIDAD_CENSO };
 }
 function estiloAsistencia(f) {
@@ -838,8 +878,10 @@ function estiloAsistencia(f) {
     const pr = f.properties['proporcion_asistencia_' + nv];
     return { stroke: false, fill: true, fillColor: RAMPA_CENSO[clase(pr, CORTES_ASISTENCIA[nv])], fillOpacity: OPACIDAD_CENSO };
   }
-  if (fi === false)  // ruidoso (0 < den < 20): gris solido, fuera de la rampa
-    return { stroke: false, fill: true, fillColor: GRIS_CENSO_RUIDOSO, fillOpacity: OPACIDAD_CENSO_GRIS };
+  if (fi === false)  // ruidoso (0 < den < 20): trama diagonal, fuera de la rampa.
+    // fillOpacity 1: la transparencia va horneada en el mosaico (globalAlpha la
+    // multiplicaria y desteniria la linea hasta acercarla otra vez al papel).
+    return { stroke: false, fill: true, fillColor: S.censo.patron, fillOpacity: 1 };
   // fi === null (den == 0): hueco, solo contorno. Tercer tratamiento, distinto de los dos.
   return { stroke: true, color: '#b9b3a7', weight: 0.6, opacity: 0.75, fill: false };
 }
@@ -927,15 +969,18 @@ function subselectorCenso() {
 function leyendaCenso() {
   const el = document.getElementById('censo-leyenda');
   const nota = document.getElementById('censo-nota');
-  const cuadro = (color, op, etq, hueco) =>
-    `<div class="leyenda-item"><span class="ly-cuadro${hueco ? ' hueco' : ''}"${hueco ? '' :
+  // `variante` ('hueco' | 'hachurado') pinta el cuadro desde el CSS: la leyenda del
+  // estado ruidoso debe mostrar la TRAMA, no un cuadrito plano, o vuelve a decir
+  // "gris" justo lo que el mapa ya dejo de decir.
+  const cuadro = (color, op, etq, variante) =>
+    `<div class="leyenda-item"><span class="ly-cuadro${variante ? ' ' + variante : ''}"${variante ? '' :
       ` style="background:${color};opacity:${op}"`}></span>${etq}</div>`;
   if (!S.censo.modo) { el.innerHTML = ''; nota.textContent = ''; return; }
   if (S.censo.modo === 'densidad') {
     const rangos = rangosConteo(CORTES_DENSIDAD[S.censo.tramo]);
     let h = '<div class="leyenda-grupo">Niños por manzana</div>';
     rangos.forEach((r, i) => { h += cuadro(RAMPA_CENSO[i], OPACIDAD_CENSO, r); });
-    h += cuadro(GRIS_CENSO_CERO, OPACIDAD_CENSO_GRIS, 'Sin población en edad');
+    h += cuadro(COLOR_SIN_POBLACION, OPACIDAD_SIN_POBLACION, 'Sin población en edad');
     el.innerHTML = h;
     nota.textContent = 'Densidad de población en edad escolar (Censo 2024), solo Costa Central. El cero es dato real (paños sin residentes en el tramo), no ausencia.';
   } else {
@@ -943,8 +988,8 @@ function leyendaCenso() {
     const rangos = rangosProp(CORTES_ASISTENCIA[nv.k]);
     let h = '<div class="leyenda-grupo">Proporción que asiste a ' + nv.et + '</div>';
     rangos.forEach((r, i) => { h += cuadro(RAMPA_CENSO[i], OPACIDAD_CENSO, r); });
-    h += cuadro(GRIS_CENSO_RUIDOSO, OPACIDAD_CENSO_GRIS, 'Denominador insuficiente (menos de 20 niños)');
-    h += cuadro(null, 0, 'Sin población en edad para el nivel', true);
+    h += cuadro(null, 0, 'Denominador insuficiente (menos de 20 niños)', 'hachurado');
+    h += cuadro(null, 0, 'Sin población en edad para el nivel', 'hueco');
     el.innerHTML = h;
     nota.textContent = 'Proporción del grupo en edad oficial que asiste al nivel (Censo 2024), región continental. No es la tasa neta del INE; el popup de una unidad no muestra la cifra comunal.';
   }
@@ -990,8 +1035,10 @@ async function activarCenso(modo) {
 }
 
 function iniciarCenso() {
-  S.censo = { modo: null, tramo: 'n_edad_6_13', nivel: 'basica',
-              cache: {}, capa: null, renderer: L.canvas({ pane: 'censo' }) };
+  // La capa de DENSIDAD (5 753 manzanas) y la de ASISTENCIA (1 216 unidades) comparten
+  // el mismo renderer Canvas: la trama no obliga a cambiar de renderer (ver HACHURA).
+  S.censo = { modo: null, tramo: 'n_edad_6_13', nivel: 'basica', cache: {}, capa: null,
+              renderer: L.canvas({ pane: 'censo' }), patron: crearPatronHachura() };
   document.querySelectorAll('.censo-opt').forEach(b =>
     b.addEventListener('click', () => activarCenso(b.dataset.modo)));
   leyendaCenso();
