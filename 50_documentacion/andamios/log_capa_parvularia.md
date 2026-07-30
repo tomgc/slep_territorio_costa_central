@@ -228,23 +228,96 @@ una sola línea; forzando los tres a `null`, el bloque desaparece entero.
 
 ---
 
-## 5. Defecto encontrado y corregido durante el Hito B
+## 5. PATRÓN — el pane que se pide y no se aplica
 
-**Las capas devueltas por `pointToLayer` no heredan `pane` ni `renderer` del `L.geoJSON`.**
-La primera versión pasaba ambos como opciones del `L.geoJSON`, que es lo que uno esperaría,
-y los 1.329 `circleMarker` terminaron en el `overlayPane` (400), mezclados con los pines del
-directorio: el orden z que el encargo exige no se cumplía. No se veía en la pantalla —los
-marcadores se dibujaban igual— y la comprobación que lo delató fue contar los hijos del pane:
-`getPane('parvularia').children` devolvía **0**. Corregido pasando `pane` y `renderer` en las
-opciones de cada `circleMarker`. Verificado después: 1 `<canvas>` en el pane, y los 1.329
-marcadores con `options.pane === 'parvularia'` y el renderer propio.
+Esto **no es una anécdota de esta capa**: es un patrón que se va a repetir cada vez que el
+proyecto agregue una capa de puntos con pane propio, y por eso va escrito como regla.
 
-Es el mismo tipo de defecto que el encargo advierte para `jsonlite`: lo que se ve bien no
-prueba que sea correcto, y hay que auditar desde donde se consume.
+**El defecto.** Las capas que devuelve `pointToLayer` **no heredan `pane` ni `renderer` del
+`L.geoJSON` que las contiene.** Escribir
+
+```js
+L.geoJSON(data, { pane: 'parvularia', renderer: miRenderer,
+                  pointToLayer: (f, ll) => L.circleMarker(ll, estilo(f)) })
+```
+
+es lo que uno esperaría que funcione, y no funciona: el `L.geoJSON` respeta esas opciones
+para su propia geometría, pero el `circleMarker` que devuelve `pointToLayer` lo construye el
+autor con **sus** opciones, y ahí no van ni `pane` ni `renderer`. Los 1.329 marcadores
+terminaron en el `overlayPane` (zIndex 400), mezclados con los pines del directorio, en vez
+del pane `parvularia` (390).
+
+**Por qué es peligroso: el síntoma es invisible.** La capa se dibuja. Los marcadores
+aparecen, con el color correcto, el radio correcto y la forma correcta. Los popups
+funcionan. Una captura de pantalla se ve bien. Lo único que está mal es el **orden z**, y el
+orden z solo se nota cuando dos elementos se superponen exactamente, que en un mapa disperso
+casi nunca pasa. Un revisor que mire el mapa y diga "se ve bien" no está mintiendo: está
+mirando el lugar equivocado.
+
+**Cómo se detecta: contando hijos del pane.** La comprobación es de una línea y no depende
+de mirar nada:
+
+```js
+S.mapa.getPane('parvularia').children.length   // 0 => el pane esta vacio: la capa NO esta ahi
+```
+
+Un pane que tiene una capa Canvas montada debe devolver **1** (`<canvas>`); uno con renderer
+SVG, **1** (`<svg>`). **Cero significa que la capa se está dibujando en otro pane**, por muy
+bien que se vea. Complementariamente, sobre las capas hijas:
+
+```js
+capas.every(m => m.options.pane === 'parvularia')      // debe ser true
+capas.every(m => m._renderer === S.parvularia.renderer) // debe ser true
+```
+
+**La corrección.** Pasar ambos en las opciones de cada marcador:
+
+```js
+pointToLayer: (f, ll) => L.circleMarker(ll, Object.assign(
+  { pane: 'parvularia', renderer: S.parvularia.renderer }, estilo(f)))
+```
+
+Verificado después de corregir: **1 `<canvas>`** en el pane, y los **1.329** marcadores con
+`options.pane === 'parvularia'` y el renderer propio.
+
+**La regla general.** Es el mismo patrón que el proyecto ya aprendió con `jsonlite` (NULL
+serializado como `{}`, arreglos de un elemento desempaquetados a escalar): **una promesa
+estructural no se verifica mirando el resultado, se verifica interrogando la estructura desde
+donde se consume.** Si un encargo pide "pane X con zIndex Y", la evidencia no es una captura:
+es el conteo de hijos de ese pane.
 
 ---
 
-## 6. Deuda declarada
+## 6. Las 4 unidades con coordenada errónea — insumo para la nota metodológica
+
+Estas cuatro unidades **declaran una comuna y traen una coordenada que cae en otra región**,
+a cientos de kilómetros. No son centinelas (cero ceros exactos, cero coordenadas repetidas
+entre ellas) ni caen al mar (las cuatro caen dentro de un polígono comunal real). Ubicación
+determinada por point-in-polygon contra la cobertura comunal **nacional** de BCN (346
+comunas, `20_insumos/comunas_bcn/comunas.shp`).
+
+| Comuna declarada | Región declarada | Coordenada observada | Cae realmente en | Región donde cae | Niños | Tipo |
+|---|---|---|---|---|---:|---|
+| Los Andes (5301) | Valparaíso | −30,39362 / −70,86971 | **Río Hurtado** | **Coquimbo** | 26 | INTEGRA Adm. Directa |
+| Los Andes (5301) | Valparaíso | −27,16129 / −109,43822 | **Isla de Pascua** | Valparaíso (insular) | 66 | INTEGRA Adm. Directa |
+| Calle Larga (5302) | Valparaíso | −30,38284 / −70,84556 | **Río Hurtado** | **Coquimbo** | 15 | INTEGRA Adm. Directa |
+| San Felipe (5701) | Valparaíso | −35,76134 / −70,72657 | **San Clemente** | **Maule** | 12 | JUNJI Adm. Directa |
+
+**Total: 4 unidades, 119 niños.** Se suman a las 4 unidades con coordenada ausente (58
+niños) para las **8 unidades / 177 niños** excluidas de la capa.
+
+**Qué decir en la nota metodológica.** El dato no permite decidir cuál de los dos campos está
+mal: puede ser la coordenada, puede ser la comuna declarada. Las cuatro unidades **sí existen
+y sí tienen matrícula**; lo que falla es su ubicación. Por eso quedan fuera del mapa pero
+dentro del universo contado: la capa publica 1.329 unidades sobre un universo continental de
+1.337, y la diferencia no es "unidades que no existen" sino "unidades que no se pueden
+ubicar". Tres de las cuatro son INTEGRA Administración Directa, que es también donde se
+concentran las 4 de coordenada ausente: **7 de las 8 exclusiones son INTEGRA Adm. Directa**,
+lo que sugiere un problema de captura en esa fuente y no un ruido repartido.
+
+---
+
+## 7. Deuda declarada
 
 **El script 39 NO está registrado en `00_run_all.R`.** El encargo lo prohíbe explícitamente
 porque el registro pertenece a la decisión del **pendiente D** (grupos de pasos del
@@ -259,7 +332,7 @@ lea este log.
 
 ---
 
-## 7. Lo que no medí
+## 8. Lo que no medí
 
 1. **FPS reales del pan y el zoom con la capa encendida.** El panel del navegador corre
    oculto en esta sesión (`document.visibilityState === "hidden"`) y Chrome estrangula
