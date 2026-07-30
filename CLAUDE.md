@@ -30,19 +30,24 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Mapa web — hito 4: exportación SVG + XLSX** (`docs/assets/mapa.js`): SVG vectorial de la
+1. **Hachurado de "denominador insuficiente"** (`docs/assets/mapa.js`, `estilo.css`): el gris
+   plano de `fiable = FALSE` (asistencia zonal) se confundía con el fondo de papel entre
+   polígonos. Reemplazado por trama diagonal, dibujada como `CanvasPattern` en `fillColor`
+   (Leaflet lo pasa tal cual a `ctx.fillStyle`): **ambas capas del Censo siguen en Canvas**.
+   Constantes renombradas a `COLOR_SIN_POBLACION` / `HACHURA`. Leyenda con el patrón, no un
+   cuadrito. Log: `50_documentacion/andamios/log_correccion_hachurado_zonal.md`.
+2. **Mapa web — hito 4: exportación SVG + XLSX** (`docs/assets/mapa.js`): SVG vectorial de la
    vista vigente (pins plenos/atenuados, fronteras CC y regional, rótulos, leyenda por vista,
    título con filtro y N, atribución; tiles raster NO incrustados y declarado en el pie);
    XLSX con SheetJS 0.20.3 LOCAL (`docs/assets/vendor/xlsx.full.min.js`, carga diferida),
    filas = filtrados incluyendo sin-geo alcanzados, celdas numéricas nativas (locale lo
    resuelve Excel/Numbers), literales tal cual JSON, hoja `Notas` con criterios. Nombre de
    archivo = filtro aplicado o fecha. Botones en panel (`iniciarExportacion`).
-2. **Mapa web — hito 3: 7 filtros acumulativos** estilo faceta (opciones sobre el subconjunto
+3. **Mapa web — hito 3: 7 filtros acumulativos** estilo faceta (opciones sobre el subconjunto
    que cumple los DEMÁS filtros); `match()` función pura del estado `F`.
-3. **Etiquetas de comuna como texto HTML** (v9 afiche): editables en Affinity; pines,
+4. **Etiquetas de comuna como texto HTML** (v9 afiche): editables en Affinity; pines,
    números y límites siguen en el PNG.
-4. **Exportación a PDF A0 vertical** (v8 afiche): texto vectorial, fuentes incrustadas.
-5. **Numeración N→S estricta** (v6); pines grandes + anti-colisión (v4); límites BCN (v3).
+5. **Exportación a PDF A0 vertical** (v8 afiche): texto vectorial, fuentes incrustadas.
 
 <!-- CANONICO_SLEP:INICIO v2 -->
 ## 1. Identidad y prioridades
