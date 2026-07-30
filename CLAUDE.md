@@ -30,24 +30,30 @@ Central (Puchuncaví, Quintero, Concón, Viña del Mar) y genera un **afiche car
   HTML final SÍ se versiona, los PNG y `*.rds` no.
 
 ## Últimos cambios (más recientes primero)
-1. **Hachurado de "denominador insuficiente"** (`docs/assets/mapa.js`, `estilo.css`): el gris
+1. **Capa de educación parvularia R5** (pendiente N, fase 1): `30_procesamiento/39_*` agrega
+   el microdato 2025 de MINEDUC/JUNJI/INTEGRA a **1.329 unidades** con coordenada válida
+   (65.258 niños) en `docs/data/parvularia_r5.geojson`; el desglose por nivel sale de
+   `NIVEL2` (armonizada, 0 NA en los tres orígenes) y VTF se separa con `TIPO_ESTAB == 6`.
+   Toggle propio e independiente del Censo, pane `parvularia` z390, marcador de **anillo**
+   (no disco) de radio menor. **Deuda: el script 39 NO está en `00_run_all.R`** (pendiente D).
+   Logs: `andamios/log_diagnostico_parvularia_r5.md` y `andamios/log_capa_parvularia.md`.
+2. **Hachurado de "denominador insuficiente"** (`docs/assets/mapa.js`, `estilo.css`): el gris
    plano de `fiable = FALSE` (asistencia zonal) se confundía con el fondo de papel entre
    polígonos. Reemplazado por trama diagonal, dibujada como `CanvasPattern` en `fillColor`
    (Leaflet lo pasa tal cual a `ctx.fillStyle`): **ambas capas del Censo siguen en Canvas**.
    Constantes renombradas a `COLOR_SIN_POBLACION` / `HACHURA`. Leyenda con el patrón, no un
    cuadrito. Log: `50_documentacion/andamios/log_correccion_hachurado_zonal.md`.
-2. **Mapa web — hito 4: exportación SVG + XLSX** (`docs/assets/mapa.js`): SVG vectorial de la
+3. **Mapa web — hito 4: exportación SVG + XLSX** (`docs/assets/mapa.js`): SVG vectorial de la
    vista vigente (pins plenos/atenuados, fronteras CC y regional, rótulos, leyenda por vista,
    título con filtro y N, atribución; tiles raster NO incrustados y declarado en el pie);
    XLSX con SheetJS 0.20.3 LOCAL (`docs/assets/vendor/xlsx.full.min.js`, carga diferida),
    filas = filtrados incluyendo sin-geo alcanzados, celdas numéricas nativas (locale lo
    resuelve Excel/Numbers), literales tal cual JSON, hoja `Notas` con criterios. Nombre de
    archivo = filtro aplicado o fecha. Botones en panel (`iniciarExportacion`).
-3. **Mapa web — hito 3: 7 filtros acumulativos** estilo faceta (opciones sobre el subconjunto
+4. **Mapa web — hito 3: 7 filtros acumulativos** estilo faceta (opciones sobre el subconjunto
    que cumple los DEMÁS filtros); `match()` función pura del estado `F`.
-4. **Etiquetas de comuna como texto HTML** (v9 afiche): editables en Affinity; pines,
+5. **Etiquetas de comuna como texto HTML** (v9 afiche): editables en Affinity; pines,
    números y límites siguen en el PNG.
-5. **Exportación a PDF A0 vertical** (v8 afiche): texto vectorial, fuentes incrustadas.
 
 <!-- CANONICO_SLEP:INICIO v2 -->
 ## 1. Identidad y prioridades
