@@ -1,6 +1,6 @@
 # Estructura del proyecto: slep_georreferenciacion
-Fecha: 2026-07-30 11:28:52
-Total entradas: 405 (77 carpetas, 328 archivos)
+Fecha: 2026-07-30 18:01:59
+Total entradas: 415 (77 carpetas, 338 archivos)
 
 ## Arbol
 
@@ -200,6 +200,7 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     30_procesamiento/36_construir_geojson_web.R  ( 18.36K)
     30_procesamiento/37_construir_capa_manzana.R  ( 10.36K)
     30_procesamiento/38_construir_capa_zonal.R  ( 16.77K)
+    30_procesamiento/39_construir_capa_parvularia.R  ( 15.95K)
 [D] 40_salidas  (-)
 [D] 40_salidas/afiche  (-)
     40_salidas/afiche/afiche_boceto_final.png  (405.81K)
@@ -291,9 +292,9 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     50_documentacion/activa/decisiones/20260712_decision_indicador_asistencia_censo2024.md  ( 12.39K)
     50_documentacion/activa/decisiones/20260712_decision_recodificacion_slep_2026.md  (  4.99K)
     50_documentacion/activa/decisiones/diagnostico_migracion_github.R  ( 10.53K)
-    50_documentacion/activa/ESTADO.md  (  1.39K)
+    50_documentacion/activa/ESTADO.md  (  1.13K)
     50_documentacion/activa/POLITICA_PROYECTO.md  ( 39.14K)
-    50_documentacion/activa/SETTINGS_Y_PROMPTS_OPERACIONALES.md  ( 81.73K)
+    50_documentacion/activa/SETTINGS_Y_PROMPTS_OPERACIONALES.md  ( 82.43K)
 [D] 50_documentacion/andamios  (-)
     50_documentacion/andamios/auditoria_35_36_datos.md  (  9.42K)
     50_documentacion/andamios/auditoria_afiche_etiquetas_html.R  (  5.73K)
@@ -307,6 +308,7 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     50_documentacion/andamios/auditoria_limites_bcn.R  (  4.96K)
     50_documentacion/andamios/auditoria_mapa_web.md  (  8.78K)
     50_documentacion/andamios/auditoria_recodificacion_slep.md  (  4.48K)
+    50_documentacion/andamios/diagnostico_parvularia_r5.R  ( 29.32K)
     50_documentacion/andamios/encargo_claude_code_35_36_v1.md  (  9.19K)
     50_documentacion/andamios/encargo_claude_code_afiche_v1.md  ( 11.63K)
     50_documentacion/andamios/encargo_claude_code_afiche_v2_simplificado.md  (  7.59K)
@@ -316,10 +318,15 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     50_documentacion/andamios/encargo_claude_code_mapa_interactivo_v1.md  ( 18.04K)
     50_documentacion/andamios/encargo_claude_code_mapa_web_v2.md  ( 14.07K)
     50_documentacion/andamios/encargo_claude_code_numeracion_ns_v6.md  (  6.94K)
+    50_documentacion/andamios/encargo_claude_code_parvularia_capa_v1.md  ( 10.15K)
+    50_documentacion/andamios/encargo_claude_code_parvularia_diagnostico_v1.md  (  9.73K)
     50_documentacion/andamios/encargo_claude_code_pines_grandes_v4.md  (  7.79K)
     50_documentacion/andamios/encargo_claude_code_tile_etiquetas_v7.md  (  7.09K)
+    50_documentacion/andamios/log_capa_parvularia.md  ( 18.54K)
     50_documentacion/andamios/log_construccion_capa_manzana.md  (  4.99K)
     50_documentacion/andamios/log_construccion_capa_zonal.md  (  7.89K)
+    50_documentacion/andamios/log_correccion_hachurado_zonal.md  ( 11.37K)
+    50_documentacion/andamios/log_diagnostico_parvularia_r5.md  ( 17.48K)
     50_documentacion/andamios/log_frontend_capas_censo.md  (  8.4K)
 [D] 50_documentacion/andamios/logs  (-)
     50_documentacion/andamios/logs/20260625_afiche_paradigma_d_log.md  (  8.95K)
@@ -348,12 +355,12 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     50_documentacion/andamios/reporte_umbral_denominador_zonal.md  (  6.95K)
     50_documentacion/andamios/reporte_viabilidad_manzana_censo2024.md  ( 12.93K)
 [D] 50_documentacion/estructura  (-)
-    50_documentacion/estructura/20260712_143216_estructura.md  ( 31.9K)
-    50_documentacion/estructura/20260712_143216_estructura.txt  ( 31.89K)
     50_documentacion/estructura/20260712_165344_estructura.md  ( 32.07K)
     50_documentacion/estructura/20260712_165344_estructura.txt  ( 32.06K)
-    50_documentacion/estructura/estructura_actual.md  ( 32.07K)
-    50_documentacion/estructura/estructura_actual.txt  ( 32.06K)
+    50_documentacion/estructura/20260730_112852_estructura.md  ( 32.54K)
+    50_documentacion/estructura/20260730_112852_estructura.txt  ( 32.53K)
+    50_documentacion/estructura/estructura_actual.md  ( 32.54K)
+    50_documentacion/estructura/estructura_actual.txt  ( 32.53K)
 [D] 50_documentacion/traspasos  (-)
     50_documentacion/traspasos/traspaso_cierre_v01.md  ( 10.82K)
     50_documentacion/traspasos/traspaso_cierre_v02.md  ( 17.37K)
@@ -366,7 +373,9 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     50_documentacion/traspasos/traspaso_cierre_v09.md  ( 39.19K)
     50_documentacion/traspasos/traspaso_cierre_v10.md  ( 36.57K)
     50_documentacion/traspasos/traspaso_cierre_v11.md  ( 45.9K)
-    CLAUDE.md  ( 13.71K)
+    50_documentacion/traspasos/traspaso_cierre_v12.md  ( 10.29K)
+    50_documentacion/traspasos/traspaso_cierre_v13.md  ( 32.97K)
+    CLAUDE.md  ( 14.68K)
 [D] design_handoff_mapa_establecimientos  (-)
 [D] design_handoff_mapa_establecimientos/assets  (-)
     design_handoff_mapa_establecimientos/assets/logo-color-stacked.png  (126.29K)
@@ -383,14 +392,14 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     design_handoff_mapa_establecimientos/README.md  ( 13.17K)
 [D] docs  (-)
 [D] docs/assets  (-)
-    docs/assets/estilo.css  ( 17.91K)
+    docs/assets/estilo.css  ( 19.14K)
 [D] docs/assets/fonts  (-)
     docs/assets/fonts/gobCL_Heavy.otf  ( 43.73K)
     docs/assets/fonts/gobCL_Regular.otf  ( 35.67K)
     docs/assets/fonts/MuseoSans_500.otf  ( 61.04K)
     docs/assets/fonts/MuseoSans-300.otf  ( 61.45K)
     docs/assets/logo-color-stacked.png  (126.29K)
-    docs/assets/mapa.js  ( 56.68K)
+    docs/assets/mapa.js  ( 68.48K)
 [D] docs/assets/vendor  (-)
     docs/assets/vendor/leaflet.css  ( 14.46K)
     docs/assets/vendor/leaflet.js  (144.09K)
@@ -403,8 +412,9 @@ Total entradas: 405 (77 carpetas, 328 archivos)
     docs/data/frontera_costa_central.geojson  ( 21.1K)
     docs/data/frontera_region.geojson  ( 79.26K)
     docs/data/metadatos.json  (  4.06K)
+    docs/data/parvularia_r5.geojson  (524.69K)
     docs/data/sin_geo.json  (  5.43K)
-    docs/index.html  (  4.73K)
+    docs/index.html  (  5.34K)
     README.md  ( 13.87K)
     sincronizar_docs.sh  (440)
     slep_georreferenciacion.Rproj  (190)
@@ -414,15 +424,15 @@ Total entradas: 405 (77 carpetas, 328 archivos)
 
 ## Conteo por extension
 
-- .md: 70
+- .md: 77
 - .pdf: 61
-- .R: 41
+- .R: 43
 - .png: 35
 - .csv: 29
 - .xlsx: 28
 - .otf: 11
 - .CSV: 9
-- .geojson: 7
+- .geojson: 8
 - .html: 5
 - .json: 5
 - .rds: 4
