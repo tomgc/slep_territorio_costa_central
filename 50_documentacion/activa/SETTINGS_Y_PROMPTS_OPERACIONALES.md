@@ -1,8 +1,41 @@
 # SETTINGS_Y_PROMPTS_OPERACIONALES.md
 
-> **Versión 14.**
+> **Versión 16.**
 >
-> **Cambios respecto a v13:** nueva §4.7 (**ordenación del repositorio**),
+> **Cambios respecto a v15:** nuevo paso **4ter** en §1.2.2, gatillo observable
+> del invariante de entorno (locale UTF-8) que la POLITICA v5.6 §5.2bis declara
+> en norma, apagado por el marcador `50_documentacion/activa/50_locale_utf8.md`.
+> Se inserta inmediatamente después del 4bis, que sobrevive sin cambios, y no
+> renumera ningún paso.
+>
+> **Por qué se salta a v16.** Circularon **dos documentos distintos numerados
+> v15**, cada uno con una mitad de este contenido: uno con la edición de §2.2.15
+> (catálogo v3 y conjunto `PAT-01` a `PAT-13`), publicado en `main` de
+> `herramientas_dev` y repartido en disco a seis repos de la cartera; otro con
+> el paso 4ter en §1.2.2, commiteado en `slep_aprendizajes_ep` y nunca
+> publicado. No son contradictorios sino complementarios, y la v16 es su fusión:
+> conserva íntegra la edición de §2.2.15 y le suma el 4ter. El número 15 no se
+> reutiliza porque quedó ambiguo: quien lo cite no puede saber a cuál de los dos
+> se refiere.
+>
+> El texto del 4ter es el ya redactado en la v15 de `slep_aprendizajes_ep`, no
+> una redacción nueva. La diferencia que importa es su evidencia: comprueba que
+> la guarda esté instalada (`grep -rl asegurar_locale_utf8 10_utils`) y no que
+> exista el archivo de configuración, que sería medir un proxy del riesgo y no
+> el riesgo (PAT-13 del catálogo).
+>
+> **Cambios respecto a v14:** §2.2.15 apunta al catálogo
+> `catalogo_patrones_errores_v3.md` (el v2 quedó archivado en
+> `_archivo/20260729/gobernanza/`) y el conjunto válido del campo `patron` pasa
+> de `PAT-01` a `PAT-12` a `PAT-01` a `PAT-13`. Motivo: la sesión de reparto de
+> gobernanza del 2026-07-29 aportó cuatro hallazgos de error; tres se
+> integraron como casos particulares de PAT-01, PAT-02 y PAT-03, y el cuarto
+> abrió **PAT-13** (precondición que mide un proxy y no el riesgo). Al ser el
+> primer cambio posterior a la adopción canónica del 2026-07-25, manda la regla
+> de mantenimiento del catálogo y se abre sufijo nuevo. Ninguna otra sección de
+> este documento se edita.
+>
+> **Versión 14.** Cambios respecto a v13: nueva §4.7 (**ordenación del repositorio**),
 > protocolo bajo demanda que ejecuta en un repo concreto lo que la POLITICA
 > v5.5 ya declaró en norma: regla 1.3.1 (traspaso vigente), prefijo de decena
 > en `50_*` con sus excepciones por contrato de cartera (§2), y exclusión de
@@ -289,6 +322,20 @@ la sesión correrá en Claude Code.
    ejecuta dentro de la sesión sin aprobación explícita** ni desplaza el foco
    que el traspaso fijó: es una propuesta, no una interrupción. El protocolo
    está en §4.7. Si el archivo existe, no se menciona.
+4ter. **Gatillo del invariante de entorno.** Comprobar si existe
+   `50_documentacion/activa/50_locale_utf8.md`. Si **no** existe, el proyecto
+   no tiene garantizada la locale UTF-8 de la POLITICA v5.6 §5.2bis y el
+   pendiente está vigente: declararlo en el acuse (Fase B, "Vigentes que
+   condicionan esta sesión") en una línea, con el resultado de
+   `grep -rl asegurar_locale_utf8 10_utils | wc -l` como evidencia, y ofrecerlo
+   en la ruta de desarrollo (Fase C) como prioridad propuesta. **No se instala
+   dentro de la sesión sin aprobación explícita** ni desplaza el foco que el
+   traspaso fijó: es una propuesta, no una interrupción. El helper se copia
+   idéntico desde `herramientas_dev/plantillas/10_locale.R` y no se edita por
+   proyecto. Si el proyecto no tiene `10_utils/10_configuracion.R`, el punto de
+   arranque **no se improvisa**: es decisión del titular y el gatillo se reporta
+   como bloqueado, no como pendiente barato. Si el archivo existe, no se
+   menciona.
 5. **Ejecutar la auditoría de apertura** (política, sección 5.6, preguntas
    marcadas "Apertura") y anotar hallazgos. Sin cambio.
 
@@ -940,7 +987,7 @@ código diluiría esa comparabilidad.
 | `regla_violada` | Documento + sección exacta de la regla que existía y no se siguió (p.ej. "userPreferences, edición de archivos: entregar completo, no fragmentos") |
 | `causa_raiz` | Por qué ocurrió pese a que la regla estaba disponible (nunca "no lo sabía": la regla existía; el análisis es de por qué no se aplicó en el momento) |
 | `salvaguarda_presente` | Qué documento(s) ya contenían la regla violada (POLITICA / SETTINGS / CLAUDE.md / userPreferences / más de uno) |
-| `patron` | Etiqueta `PAT-NN` del catálogo canónico (`herramientas_dev/gobernanza/catalogo_patrones_errores_v2.md`) más el matiz libre ("PAT-01, sobre firma de función"). Conjunto válido vigente: `PAT-01` a `PAT-12`. "Nuevo" se reserva para mecanismos que ningún `PAT-NN` cubre, se escribe `PAT-NUEVO-<slug>` y obliga a proponer la entrada nueva del catálogo en el mismo traspaso |
+| `patron` | Etiqueta `PAT-NN` del catálogo canónico (`herramientas_dev/gobernanza/catalogo_patrones_errores_v3.md`) más el matiz libre ("PAT-01, sobre firma de función"). Conjunto válido vigente: `PAT-01` a `PAT-13`. "Nuevo" se reserva para mecanismos que ningún `PAT-NN` cubre, se escribe `PAT-NUEVO-<slug>` y obliga a proponer la entrada nueva del catálogo en el mismo traspaso |
 | `gatillo_observable` | El predicado que era observable en el momento del error, escrito como condición verificable y no como narración. Empieza con una etiqueta del vocabulario controlado, dos puntos, y la precisión libre del caso. Vocabulario: `afirmar-sin-leer`, `estado-git`, `cifras-datos`, `encargos-premisas`, `ausencia-adjuntos`, `comando-entorno`, `restriccion-no-propagada`, `confirmacion-redundante`, `entrega-sin-destino-o-nombre`, `costo-sobre-regla`, `iteracion-sin-criterio`, `otro`. Existe para que los grupos de gatillo sean un campo del registro y no una reconstrucción por expresión regular sobre prosa libre (el catálogo v2 documenta esa brecha en PAT-01) |
 | `intentos_previos` | Número de intentos fallidos contra el mismo objetivo antes del error (`0` si ocurrió al primer intento), más una frase de qué falló en cada uno. Es el dato que el retrospectivo no tenía y sin el cual las salvaguardas de escalada (dos fallos, segundo rechazo) no son medibles |
 | `costo` | Consecuencia real en unidad observable (turnos perdidos, ciclos de copy-paste, artefactos rehechos, fases detenidas, cifra publicada incorrecta) o `ninguno`. Nunca adjetivos. Existe porque la frecuencia sola no ordena las salvaguardas: hay patrones de un registro con costo alto por evento y patrones frecuentes de costo bajo |
