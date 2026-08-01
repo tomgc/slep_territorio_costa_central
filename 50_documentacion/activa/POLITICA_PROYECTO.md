@@ -1,9 +1,24 @@
 # POLITICA_PROYECTO.md
 
-> **Versión 5.5 — vigente.** Documento maestro único de arquitectura y
+> **Versión 5.6 — vigente.** Documento maestro único de arquitectura y
 > gobernanza. Se copia a `50_documentacion/activa/` de cada proyecto y
 > vive en la knowledge base del Project. Aplica a Claude, Claude Code y
 > cualquier agente que trabaje sobre el proyecto.
+>
+> **Cambios respecto a v5.5:** nueva **§5.2bis** (invariante de entorno:
+> locale UTF-8 garantizada por guarda de arranque, con la prohibición
+> explícita de envolver `Sys.setlocale()` en `try(..., silent = TRUE)` o
+> `suppressWarnings()`) y una línea nueva en el checklist común de inicio
+> (§8.4). Se numera "bis" a propósito: insertar un ítem numerado dentro de
+> §5.2 habría renumerado los principios 5 a 12 de §5.3 y roto todas las
+> referencias `C.N` de los traspasos de la cartera. El paso de apertura que
+> enciende el pendiente en cada proyecto vive en
+> `SETTINGS_Y_PROMPTS_OPERACIONALES.md` §1.2.2 (paso 4ter, v15). Origen:
+> sesión v108 de `slep_aprendizajes_ep` (decisión D034), donde un proceso de
+> R con locale no UTF-8 escribió escapado **todo** el texto acentuado de una
+> corrida, incluidas las glosas del catálogo curricular, y el defecto llevaba
+> tres ocurrencias con su propia lección ya escrita en un comentario del
+> proyecto.
 >
 > **Cambios respecto a v5.4:** (a) nueva regla 1.3.1, la del traspaso
 > vigente: `traspasos/` mantiene un solo archivo a la vista y
@@ -418,6 +433,56 @@ ante fuentes externas reales). Declarar la decisión cuando tensen.
 4. **Escritura atómica.** Patrón write → rename para todo artefacto que
    alimente otros procesos.
 
+### 5.2bis Invariante de entorno (locale UTF-8)
+
+Todo proyecto garantiza una locale UTF-8 **en su punto de arranque**, antes
+de la primera lectura o escritura. La garantía es una guarda ejecutable, no
+una convención ni un comentario: `asegurar_locale_utf8()`, copiada idéntica
+desde `herramientas_dev/plantillas/10_locale.R` y nunca editada por proyecto
+(misma regla que `10_resolver_rutas.R`, sección 6.2), invocada en la primera
+línea ejecutable de `10_utils/10_configuracion.R`.
+
+La guarda tiene exactamente tres comportamientos, sin cuarta salida:
+
+1. Si la locale ya es UTF-8, **retorna en silencio**.
+2. Si no lo es y puede corregirla, **la corrige avisando por `message()`
+   desde qué valor**. Una locale corregida es un síntoma que debe verse, no
+   una victoria silenciosa.
+3. Si ninguna candidata es alcanzable, **aborta con `stop()`**, nombrando el
+   valor actual, las candidatas probadas, la consecuencia concreta y el
+   remedio.
+
+**Prohibido envolver `Sys.setlocale()` en `try(..., silent = TRUE)` o en
+`suppressWarnings()`.** Una configuración que falla en silencio no es una
+configuración, es una apuesta.
+
+**Por qué es invariante y no recomendación.** Un proceso de R cuya locale no
+es UTF-8 parsea los literales acentuados con `Encoding()` "unknown" y los
+escribe escapados como su propia representación de bytes: `Párvulo` sale
+`P<c3><a1>rvulo`. El mecanismo **no distingue el origen del texto**, así que
+corrompe por igual un dato sintético y un nombre que una persona digitó. El
+defecto no es que la locale esté mal: es que nadie se entera.
+
+**Corolarios operativos.**
+
+- R lee **un solo** `.Renviron`, y el local **reemplaza** al de `~` en vez de
+  fusionarse. Toda variable nueva se agrega al archivo que el proceso
+  efectivamente lee. Nunca crear un `.Renviron` en la raíz de un repo que
+  dependa de variables declaradas en `~/.Renviron`: lo dejaría sin resolución
+  de data root (sección 6.2).
+- `.Renviron.example` es **documentación**: R no lo lee. Declarar algo ahí no
+  configura nada.
+- Los entornos de integración continua arrancan en locale POSIX por defecto:
+  `LANG` explícito en el workflow, en todo job que ejecute R.
+- Un bootstrap de locale dentro de un script **sí** protege los literales de
+  ese archivo, pero no protege ningún **uso** del literal anterior a él
+  (comparación, `enc2utf8()`, escritura). Por eso el punto de instalación es
+  el arranque común y no cada consumidor.
+
+**Verificación.** La guarda se da por instalada solo cuando se la vio fallar:
+se rompe a propósito, se comprueba que el verificador la detecta, se restaura
+y se comprueba `git diff` limpio.
+
 ### 5.3 Calidad del código
 
 5. **Modularidad con responsabilidad única**, documentando qué recibe y
@@ -738,6 +803,9 @@ escáner, el `.gitignore` correspondiente y los stubs de configuración.
 - [ ] Estructura de carpetas creada según la rama.
 - [ ] `00_run_all.R` con stub funcional y `00_escanear_proyecto.R` en raíz.
 - [ ] `10_utils/10_utils.R` con bootstrapping (`instalar_si_falta`, `log_msg`).
+- [ ] Guarda `asegurar_locale_utf8()` instalada en el punto de arranque
+      (§5.2bis), `LANG` en los workflows que ejecuten R, y marcador
+      `50_documentacion/activa/50_locale_utf8.md` depositado.
 - [ ] Git inicializado, `.gitignore` correcto, primer commit.
 - [ ] `README.md` mínimo.
 - [ ] `POLITICA_PROYECTO.md` (este documento) y
