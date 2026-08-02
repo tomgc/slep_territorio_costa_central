@@ -38,6 +38,14 @@
 # categoria que gobierna la codificacion de caracteres, que es el problema que
 # este archivo existe para resolver; LANG acompana como default de las demas
 # categorias sin pisar lo que el usuario haya fijado explicitamente.
+#
+# --- El mensaje declara lo que ocurrio, no lo que se pretendia --------------
+# La exportacion puede no ocurrir por dos motivos legitimos: LC_ALL viene
+# fijado (gana sobre LANG y LC_CTYPE en cualquier hijo, asi que rellenarlos
+# seria ruido sin efecto) o LANG y LC_CTYPE ya traen valor (manda el usuario).
+# En esos casos el proceso queda corregido y los hijos NO. Un aviso que afirme
+# la exportacion sin haberla hecho declara una cobertura que no existe, que es
+# exactamente el defecto que este archivo persigue en el resto del sistema.
 # =============================================================================
 
 # Locales UTF-8 aceptables, en orden de preferencia. Pobladas con lo que existe
@@ -72,6 +80,29 @@ LOCALES_UTF8_CANDIDATAS <- c("es_ES.UTF-8", "en_US.UTF-8", "C.UTF-8")
   TRUE
 }
 
+#' Explicar por que la exportacion no ocurrio
+#'
+#' Se llama solo cuando .exportar_locale_al_entorno() devolvio FALSE tras una
+#' correccion exitosa del proceso. Nombra la causa concreta en vez de callar.
+#'
+#' @return string listo para concatenar al message().
+#' @keywords internal
+.motivo_sin_exportar <- function() {
+  if (nzchar(Sys.getenv("LC_ALL"))) {
+    return(paste0(
+      "\n  El entorno NO se modifico: LC_ALL viene fijado en '",
+      Sys.getenv("LC_ALL"), "' y gana sobre LANG y LC_CTYPE en cualquier hijo.",
+      "\n  Los procesos hijos (quarto, typst, system2) arrancaran con esa",
+      "\n  locale y NO con la correccion de este proceso."
+    ))
+  }
+  paste0(
+    "\n  El entorno NO se modifico: LANG y LC_CTYPE ya venian declarados",
+    " (LANG='", Sys.getenv("LANG"), "', LC_CTYPE='", Sys.getenv("LC_CTYPE"), "').",
+    "\n  Manda lo que declaro el usuario; los hijos heredaran eso."
+  )
+}
+
 #' Asegurar que el proceso corre con locale de caracteres UTF-8
 #'
 #' Si la locale ya es UTF-8, no la toca. Si no lo es, intenta UNA vez
@@ -80,7 +111,8 @@ LOCALES_UTF8_CANDIDATAS <- c("es_ES.UTF-8", "en_US.UTF-8", "C.UTF-8")
 #' configurado, no una victoria); si no lo logra, stop() con el remedio.
 #'
 #' En ambos casos de exito exporta la locale al entorno si venia vacio, para
-#' que los procesos hijos no arranquen en C (ver cabecera, R36).
+#' que los procesos hijos no arranquen en C (ver cabecera, R36). Cuando la
+#' exportacion no ocurre, el mensaje lo dice y nombra la causa.
 #'
 #' @param contexto string con el nombre del script que llama (para el mensaje).
 #' @return invisible(TRUE) si la locale queda UTF-8; stop() si no se pudo.
@@ -112,13 +144,18 @@ asegurar_locale_utf8 <- function(contexto = "pipeline") {
     Sys.setlocale("LC_ALL", candidata)
     if (isTRUE(l10n_info()[["UTF-8"]])) {
       # Exportar ANTES del message, para que el aviso pueda declarar el efecto
-      # completo en una sola lectura.
-      .exportar_locale_al_entorno(candidata)
+      # completo en una sola lectura. El valor de retorno se captura: sin el,
+      # el aviso afirmaria una exportacion que puede no haber ocurrido.
+      exporto <- .exportar_locale_al_entorno(candidata)
       message(
         "[ locale ] ", contexto, ": locale corregida en caliente a ", candidata,
-        " (el proceso arranco con ", desde, ")\n",
-        "  y exportada al entorno (LANG, LC_CTYPE) para los procesos hijos.\n",
-        "  Es un sintoma de entorno mal configurado, no una victoria: otro\n",
+        " (el proceso arranco con ", desde, ")",
+        if (isTRUE(exporto)) {
+          "\n  y exportada al entorno (LANG, LC_CTYPE) para los procesos hijos."
+        } else {
+          .motivo_sin_exportar()
+        },
+        "\n  Es un sintoma de entorno mal configurado, no una victoria: otro\n",
         "  proceso R de esta maquina puede arrancar igual y escribir texto\n",
         "  acentuado escapado. Remedio permanente: agregar la linea LANG de\n",
         "  .Renviron.example a ~/.Renviron y reiniciar R."

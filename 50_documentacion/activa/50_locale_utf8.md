@@ -10,7 +10,7 @@ hijos que lo hagan.
 
 - Archivo: `10_utils/10_locale.R`.
 - Origen: `herramientas_dev/plantillas/10_locale.R`, copiado **identico**.
-- md5 de la plantilla al momento de copiar: `b193041b45c883ea76b57cda66a19f9c`.
+- md5 de la plantilla al momento de copiar: `0f7b5dbf52b174e52f73d047196f3445`.
 - Punto de invocacion: primera linea ejecutable de
   `10_utils/10_configuracion.R`, antes de cualquier lectura o escritura.
 
