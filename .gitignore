@@ -1,0 +1,67 @@
+# =============================================================================
+# .gitignore — slep_territorio_costa_central
+#
+# Este repositorio contiene un SITIO ESTATICO y nada mas: la fuente del mapa en
+# docs/, este archivo y el README. No hay codigo de procesamiento, ni entorno de
+# ejecucion, ni datos crudos.
+#
+# Por eso las reglas de abajo no calzan hoy con ningun archivo del arbol, y no
+# son basura: son sellos PREVENTIVOS. Protegen contra lo que puede llegar (una
+# credencial copiada por descuido, un temporal de editor, un binario de datos
+# pesado), no contra lo que hay. No se retiran por no calzar.
+# =============================================================================
+
+# ---- Credenciales -----------------------------------------------------------
+# Defensa en profundidad. Nada de esto deberia existir aqui jamas.
+.env
+.Renviron
+*credentials*
+*secret*
+*token*
+*password*
+
+# ---- Temporales de editor, de sistema y de herramientas ---------------------
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+*.bak
+*_freeze/
+.quarto/
+
+# ---- Binarios de datos pesados ----------------------------------------------
+# Sello por extension: los artefactos que el sitio sirve son JSON y GeoJSON
+# livianos, y viven versionados en docs/data/. Un binario columnar aqui seria
+# un dato crudo que no corresponde publicar.
+# Datos tabulares y binarios: nada de esto debe terminar servido por Pages.
+# Los formatos que el sitio SI sirve (.json y .geojson) quedan deliberadamente
+# fuera del sello.
+*.parquet
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.rds
+*.rdata
+*.RData
+*.sav
+*.dta
+*.feather
+*.arrow
+*.sqlite
+*.sqlite3
+*.db
+*.accdb
+*.mdb
+*.shp
+*.dbf
+*.gpkg
+*.zip
+*.7z
+*.tar
+*.gz
