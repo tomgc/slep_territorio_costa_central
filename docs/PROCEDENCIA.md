@@ -80,4 +80,4 @@ invisible, que es exactamente el modo en que un fork deja de ser explicable.
 
 | Fecha | Qué | Quién |
 |---|---|---|
-| | | |
+| 2026-08-29 | **Inyección de `slep_sostenedor` y `slep_procedencia`** en `docs/data/parvularia_r5.geojson` (1.329 features, exactamente dos claves nuevas por feature; el resto del archivo quedó byte-idéntico, verificado por reversión). Fuente: el artefacto vigente del proyecto interno, huella `fa1ebd687340d69f21f583ceae99c48717f9ef56c81e1bdc9ea9bfd9e78137d4`; inyector versionado en el proyecto interno (`50_documentacion/andamios/inyectar_atribucion_fork.R`). **Porte del consumidor** (`docs/assets/mapa.js`): la atribución de Servicio Local de un VTF se lee del dato en vez de derivarse de la comuna (se eliminó `slepDeComuna`), la tarjeta y la exportación declaran la procedencia (frase en la tarjeta, columna `Procedencia` y hoja `Notas` del XLSX) y la leyenda, la nota y la etiqueta del tipo 6 dejaron de decir «administrador» y «comuna sin traspaso». `README.md` actualizado en su fila de la capa. Encargo S34-E4 de la sesión 34 del proyecto interno, con verificación completa transcrita en su log | Área de Monitoreo |
