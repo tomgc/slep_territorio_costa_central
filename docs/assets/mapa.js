@@ -253,9 +253,10 @@ function construirLeyenda() {
   h += '<div class="leyenda-grupo">Sostenedores de educación parvularia</div>';
   h += item(COLOR_JUNJI, 'JUNJI');
   h += item(COLOR_INTEGRA, 'INTEGRA');
-  // Los VTF de las comunas confirmadas ya aparecen arriba, en la fila de su
-  // SLEP. Esta fila es solo para aquellos cuyo administrador no consta.
-  h += item(COLOR_SIN_ADMIN, 'JUNJI VTF de comuna sin traspaso (administrador no identificado)');
+  // Los VTF cuyo sostenedor es un Servicio Local ya aparecen arriba, en la
+  // fila de ese SLEP. Esta fila es para los demas: sostenedor distinto de un
+  // Servicio Local, o sin dato en la fuente.
+  h += item(COLOR_SIN_ADMIN, 'JUNJI VTF con sostenedor distinto de un Servicio Local');
   el.innerHTML = h;
   const pend = (S.meta.filtro_slep || []).filter(s => s.estado === 'pendiente');
   if (pend.length)
@@ -885,19 +886,21 @@ function construirLibro() {
   // (null = el origen no lo trae), sin convertir ausencia en cero.
   const parv = filasParvularia();
   if (parv.length) {
-    const cabP = ['Nombre', 'Comuna', 'Provincia', 'Sostenedor o administrador',
+    // La Procedencia viaja junto al Sostenedor (porte S34-E4): el archivo se
+    // lee sin el mapa delante y la atribucion no puede quedar sobreentendida.
+    const cabP = ['Nombre', 'Comuna', 'Provincia', 'Sostenedor', 'Procedencia',
                   'Matrícula total (2025)', 'Sala cuna', 'Medio', 'Transición'];
     const aoaP = [cabP];
     for (const pr of parv) {
       aoaP.push([titulo(pr.nombre), titulo(pr.comuna), provDeComuna(pr.comuna) || null,
-        etiquetaParvularia(pr),
+        etiquetaParvularia(pr), pr.slep_procedencia || null,
         esNum(pr.matricula_total) ? pr.matricula_total : null,
         esNum(pr.mat_sala_cuna) ? pr.mat_sala_cuna : null,
         esNum(pr.mat_medio) ? pr.mat_medio : null,
         esNum(pr.mat_transicion) ? pr.mat_transicion : null]);
     }
     const wsP = XLSX.utils.aoa_to_sheet(aoaP);
-    wsP['!cols'] = [{ wch: 44 }, { wch: 16 }, { wch: 22 }, { wch: 40 },
+    wsP['!cols'] = [{ wch: 44 }, { wch: 16 }, { wch: 22 }, { wch: 40 }, { wch: 18 },
                     { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, wsP, 'Jardines infantiles');
   }
@@ -919,6 +922,15 @@ function construirLibro() {
     ['— unidades de párvulos (hoja Jardines infantiles)', parv.length],
     ['Dos hojas', 'Las unidades de párvulos de JUNJI e INTEGRA no tienen RBD, niveles del directorio ni serie anual, así que van en su propia hoja con sus propias columnas.'],
     ['Universo parvulario', 'Solo unidades cuyo sostenedor no está en el directorio: los jardines de un establecimiento con RBD ya están en la fila de ese establecimiento.'],
+    // Los tres valores de Procedencia y el anio del insumo, declarados donde el
+    // archivo se lee solo (porte S34-E4). El anio sale del dato, no se escribe
+    // a mano; solo se emite si la hoja de jardines viajo en este libro.
+    ...(parv.length ? (() => {
+      const a = anioInsumoParvularia();
+      const anioTxt = a ? String(a) : 'no derivable del dato';
+      return [['Procedencia (jardines)',
+        `Los tres valores de la columna Procedencia: declarada_${a || '<año>'} = la fuente del insumo declara al Servicio Local como sostenedor; derivada_comuna = sostenedor municipal al que se le atribuye el Servicio Local que opera en su comuna, cuya entrada en operación es posterior al corte del insumo; sin_dato = sin Servicio Local atribuido (figura la glosa de su tipo). Año del insumo: ${anioTxt}.`]];
+    })() : []),
     ['Serie anual', 'Celda vacía = año sin registro de matrícula en la fuente (nunca 0).'],
     ['Dependencia', S.meta.criterios_calculo.dependencia],
     ['Matrícula', S.meta.criterios_calculo.matricula],
@@ -1025,19 +1037,15 @@ const COLOR_INTEGRA = '#C2185B';
 // es". Solo lo usan los VTF fuera de las cuatro comunas del Area de Monitoreo.
 const COLOR_SIN_ADMIN = '#7d7a74';
 /* "JUNJI VTF" nombra la VIA DE FINANCIAMIENTO (transferencia de fondos), no al
-   sostenedor: quien administra es un tercero. Regla del titular (sesion 22): en
-   toda comuna traspasada, ese tercero es el Servicio Local que administra la
-   educacion publica de la comuna. Por eso el VTF toma el color del SLEP de su
-   comuna, igual que cualquier otro EE del mismo sostenedor, y solo queda en gris
-   donde la comuna no tiene SLEP (traspaso pendiente): ahi el administrador puede
-   ser el municipio o una corporacion, y no hay fuente.
-   Esta regla SUSTITUYE al aviso del traspaso v21 que prohibia pintar los VTF
-   como unidades de un Servicio Local: aquel se apoyaba en la ausencia del campo
-   en el geojson, y la ausencia de un campo no es la ausencia del hecho. */
+   sostenedor: quien lo tiene a su cargo es un tercero. Desde el porte S34-E4 el
+   dato trae a ese tercero en el campo slep_sostenedor, y slep_procedencia
+   declara de donde sale cada atribucion. El VTF cuyo sostenedor es un Servicio
+   Local toma el color de ese Servicio; queda en gris el de sostenedor distinto
+   de un Servicio Local o sin dato en la fuente. Nada se deriva de la comuna. */
 const COLOR_PARVULARIA = {
   // Los tipos 1 a 4 NO entran: son unidades de EE que ya tienen pin propio.
   5: COLOR_JUNJI,                             // JUNJI Administracion Directa
-  6: COLOR_SIN_ADMIN,                         // JUNJI VTF de comuna sin SLEP (traspaso pendiente)
+  6: COLOR_SIN_ADMIN,                         // JUNJI VTF sin SLEP sostenedor en la fuente
   7: COLOR_INTEGRA,                           // INTEGRA Administracion Directa
   8: COLOR_INTEGRA                            // INTEGRA CAD
 };
@@ -1050,7 +1058,7 @@ const COLOR_PARVULARIA = {
    un tercero con fondos JUNJI y es la figura que se traspasa a los SLEP. */
 const ETIQUETA_PARVULARIA = {
   5: 'JUNJI',
-  6: 'JUNJI VTF (administración no identificada)',
+  6: 'JUNJI VTF',
   7: 'INTEGRA',
   8: 'INTEGRA'
 };
@@ -1067,21 +1075,29 @@ function provDeComuna(com) {
   }
   return S.provPorComuna.get(com) || null;
 }
-function slepDeComuna(com) {
-  if (!S.slepPorComuna) {
-    S.slepPorComuna = new Map();
-    for (const f of S.ee) {
-      const p = f.properties;
-      if (p.slep && !S.slepPorComuna.has(p.com)) S.slepPorComuna.set(p.com, p.slep);
-    }
-  }
-  return S.slepPorComuna.get(com) || null;
-}
-// SLEP que administra un VTF: el de su comuna, resuelto contra la tabla
-// comuna -> SLEP derivada de los pines del directorio. Devuelve null para las
-// comunas sin traspaso, que son las unicas que quedan sin administrador.
+/* SLEP SOSTENEDOR de un VTF, LEIDO DEL DATO (porte S34-E4 desde el proyecto
+   interno). Antes esta funcion derivaba el SLEP de la comuna con una tabla
+   comuna -> SLEP construida desde los pines (slepDeComuna, eliminada junto con
+   su tabla: este era su unico llamador, medido antes de borrarla). Esa
+   derivacion convertia un atributo geografico en uno administrativo y atribuia
+   un Servicio Local a VTF de sostenedor privado. Ahora el valor viene del campo
+   slep_sostenedor del geojson; sin dato, null. */
 function slepDelVtf(p) {
-  return p.tipo_estab === 6 ? slepDeComuna(p.comuna) : null;
+  return p.tipo_estab === 6 ? (p.slep_sostenedor || null) : null;
+}
+/* Anio del corte del insumo parvulario, LEIDO DEL DATO: el sufijo de
+   `declarada_<anio>` que trae slep_procedencia. Fuente unica del anio para la
+   frase de procedencia de la tarjeta y la hoja Notas; no se escribe a mano. */
+function anioInsumoParvularia() {
+  if (S.parvularia.anioInsumo !== undefined) return S.parvularia.anioInsumo;
+  let anio = null;
+  const feats = (S.parvularia.cache && S.parvularia.cache.features) || [];
+  for (const f of feats) {
+    const m = /^declarada_(\d{4})$/.exec(f.properties.slep_procedencia || '');
+    if (m) { anio = +m[1]; break; }
+  }
+  S.parvularia.anioInsumo = anio;
+  return anio;
 }
 function colorParvularia(p) {
   const s = slepDelVtf(p);
@@ -1121,6 +1137,17 @@ function popupParvularia(p) {
   const filas = nivel('Sala cuna', p.mat_sala_cuna) +
                 nivel('Medio', p.mat_medio) +
                 nivel('Transición', p.mat_transicion);
+  // Procedencia derivada: la atribucion del Servicio Local no viene de la
+  // fuente sino de la comuna, y la tarjeta lo declara (porte S34-E4). El anio
+  // sale del dato (anioInsumoParvularia), nunca escrito a mano; si no fuera
+  // derivable, la frase omite el parentesis en vez de inventarlo.
+  let procedencia = '';
+  if (p.slep_procedencia === 'derivada_comuna') {
+    const a = anioInsumoParvularia();
+    procedencia = `<div class="pp-nota">Se le atribuye el Servicio Local que ` +
+      `opera en su comuna. El último dato de sostenedor disponible` +
+      `${a ? ` (${a})` : ''} es anterior al inicio de funciones de ese Servicio.</div>`;
+  }
   return `<div class="pp pp-parv">
     <div class="pp-nombre">${titulo(p.nombre)}</div>
     <div class="pp-sub">${etiquetaParvularia(p)} · ${titulo(p.comuna)}</div>
@@ -1129,6 +1156,7 @@ function popupParvularia(p) {
       <span class="pp-parv-etq">niños matriculados (2025)</span>
     </div>
     ${filas ? `<div class="pp-tabla-cifras">${filas}</div>` : ''}
+    ${procedencia}
   </div>`;
 }
 
@@ -1142,8 +1170,11 @@ function notaParvularia(visible) {
     'Educación parvularia 2025 (JUNJI e INTEGRA), región continental. Solo ' +
     'unidades cuyo sostenedor no está en el directorio de establecimientos: los ' +
     'jardines de un EE con RBD ya se muestran en el pin de ese establecimiento. ' +
-    'Los VTF llevan el color del Servicio Local que administra la educación ' +
-    'pública de su comuna; donde el traspaso está pendiente, el administrador no consta.';
+    'Los VTF llevan el color del Servicio Local que la fuente declara como su ' +
+    'sostenedor (matrícula parvularia 2025); los de sostenedor municipal cuya ' +
+    'comuna ya cuenta con un Servicio Local en operación llevan el de ese ' +
+    'Servicio, con la procedencia declarada en la tarjeta y en la exportación. ' +
+    'Los demás van en gris.';
 }
 
 async function activarParvularia(encender) {
