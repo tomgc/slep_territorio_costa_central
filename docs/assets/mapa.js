@@ -263,6 +263,17 @@ function construirLeyenda() {
     document.getElementById('nota-slep-pendientes').textContent =
       'SLEP con traspaso pendiente: ' +
       pend.map(s => `${s.slep} (${s.anio_traspaso})`).join(' · ') + '.';
+  // Traspaso parcial: el SLEP ya tiene EE en el mapa (por eso su estado es
+  // vigente y aparece en el desplegable), pero alguna de sus comunas se
+  // incorpora en un anio posterior al de vigencia. Sin este segmento la nota
+  // anunciaba un traspaso completo que los propios pines contradicen.
+  const parc = (S.meta.filtro_slep || []).filter(s => s.traspaso_parcial === true);
+  if (parc.length) {
+    const nota = document.getElementById('nota-slep-pendientes');
+    nota.textContent += (nota.textContent ? ' ' : '') +
+      'SLEP con traspaso parcial: ' +
+      parc.map(s => `${s.slep} (completa en ${s.anio_traspaso_max})`).join(' · ') + '.';
+  }
 }
 
 /* ---- Mascara invertida: el mundo menos la Region de Valparaiso ----
