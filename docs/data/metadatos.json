@@ -21,7 +21,7 @@
     "exclusion_insular": "Territorio insular oceanico excluido del alcance v1 (comunas 5201 Isla de Pascua y 5104 Juan Fernandez, 6 EE; sistema educativo insular propio y distorsion del encuadre continental). Decision de alcance, no descarte definitivo: candidato a capa/inset en v2."
   },
   "criterios_calculo": {
-    "dependencia": "La dependencia refleja la situación institucional vigente a 2026, incluyendo traspasos a Servicios Locales de Educación posteriores al corte del directorio (30-abr-2025). Comunas con traspaso postergado (Zapallar, Santo Domingo) se mantienen municipales. Fuente: listado oficial de SLEP 2026; recodificación deliberada y documentada respecto del dato literal del directorio.",
+    "dependencia": "La dependencia refleja la situación institucional vigente a 2026, incluyendo traspasos a Servicios Locales de Educación posteriores al corte del directorio (30-abr-2025). El año de traspaso se toma por comuna desde el listado oficial: una comuna cuyo año es posterior a 2026 se mantiene municipal aunque otras comunas del mismo SLEP ya estén traspasadas, de modo que un SLEP puede tener traspaso parcial. Fuente: listado oficial de SLEP 2026; recodificación deliberada y documentada respecto del dato literal del directorio.",
     "matricula": "Matricula anual por RBD = numero de estudiantes distintos (MRUN unicos) en la base oficial 'Matricula por estudiante'; el identificador se descarta tras agregar y no se publica.",
     "matricula_actual": "Matricula del anio mas reciente disponible (2025). Sin registro ese anio: 'Sin matrícula en 2025.'",
     "max_10": "Mayor matricula anual en la ventana.",
@@ -51,42 +51,58 @@
     {
       "slep": "Valparaíso",
       "anio_traspaso": 2021,
-      "estado": "vigente"
+      "anio_traspaso_max": 2021,
+      "estado": "vigente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Costa Central",
       "anio_traspaso": 2025,
-      "estado": "vigente"
+      "anio_traspaso_max": 2025,
+      "estado": "vigente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Aconcagua",
       "anio_traspaso": 2026,
-      "estado": "vigente"
+      "anio_traspaso_max": 2026,
+      "estado": "vigente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Los Andes",
       "anio_traspaso": 2026,
-      "estado": "vigente"
+      "anio_traspaso_max": 2026,
+      "estado": "vigente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Marga Marga",
       "anio_traspaso": 2026,
-      "estado": "vigente"
+      "anio_traspaso_max": 2026,
+      "estado": "vigente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Petorca",
       "anio_traspaso": 2026,
-      "estado": "vigente"
+      "anio_traspaso_max": 2027,
+      "estado": "vigente",
+      "traspaso_parcial": true
     },
     {
       "slep": "del Litoral",
       "anio_traspaso": 2027,
-      "estado": "pendiente"
+      "anio_traspaso_max": 2028,
+      "estado": "pendiente",
+      "traspaso_parcial": false
     },
     {
       "slep": "Quillota",
       "anio_traspaso": 2029,
-      "estado": "pendiente"
+      "anio_traspaso_max": 2029,
+      "estado": "pendiente",
+      "traspaso_parcial": false
     }
   ],
   "fuentes": {
