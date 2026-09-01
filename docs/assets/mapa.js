@@ -1219,6 +1219,7 @@ async function activarParvularia(encender) {
   }
   // si el usuario apago mientras cargaba, no montar
   if (!S.parvularia.activa) return;
+  if (S.parvularia.capa) { S.mapa.removeLayer(S.parvularia.capa); S.parvularia.capa = null; }  // BUG-37-2
   S.parvularia.capa = L.geoJSON(data, {
     renderer: S.renderer,
     // Fuera los tipos 1 a 4: son unidades de parvulos de EE que ya tienen pin.
